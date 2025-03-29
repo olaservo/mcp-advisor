@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { FastMCP } from "fastmcp";
-import * as fs from "node:fs";
-import * as path from "node:path";
+import schema from "./schema/schema.json";
 
 const server = new FastMCP({
   name: "mcp-spec-server",
@@ -11,11 +10,7 @@ const server = new FastMCP({
 server.addPrompt({
   name: "mcp-spec-latest",
   description: "Provides the complete Model Context Protocol JSON schema specification (2025-03-26) for reference",
-  load: async () => {
-    const schemaPath = path.join(process.cwd(), "spec/schema.json");
-    const schema = JSON.parse(fs.readFileSync(schemaPath, "utf-8"));
-    return JSON.stringify(schema);
-  }
+  load: async () => JSON.stringify(schema)
 });
 
 // Handle process signals for clean shutdown
