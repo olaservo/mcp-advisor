@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 import { FastMCP } from "fastmcp";
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const schema = require('./schema/schema.json');
+import schema from "./schema/schema.json" with { type: "json" };
 
 const server = new FastMCP({
   name: "mcp-spec-server",
