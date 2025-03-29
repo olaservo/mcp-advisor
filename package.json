@@ -1,6 +1,6 @@
 {
   "name": "mcp-advisor",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "MCP Server to assist LLMs and humans on Model Context Protocol (MCP) spec compliance and understanding",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,13 +9,12 @@
     "dist"
   ],
   "bin": {
-    "mcp-advisor": "dist/cli.js"
+    "mcp-advisor": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
-    "postbuild": "node -e \"const fs=require('fs'); fs.copyFileSync('dist/index.js', 'dist/cli.js'); if(process.platform !== 'win32') require('child_process').execSync('chmod +x dist/index.js dist/cli.js')\"",
+    "postbuild": "node -e \"const fs=require('fs'); if(process.platform !== 'win32') require('child_process').execSync('chmod +x dist/index.js')\"",
     "start": "node dist/index.js",
-    "dev": "npx fastmcp dev src/index.ts",
     "prepublishOnly": "npm run build"
   },
   "repository": {
@@ -38,7 +37,7 @@
   },
   "homepage": "https://github.com/olaservo/mcp-advisor#readme",
   "dependencies": {
-    "fastmcp": "^1.20.5",
+    "@modelcontextprotocol/sdk": "^1.8.0",
     "typescript": "^5.8.2",
     "zod": "^3.24.2"
   },
