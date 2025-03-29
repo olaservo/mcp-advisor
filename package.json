@@ -1,0 +1,33 @@
+{
+  "name": "mcp-advisor",
+  "version": "0.0.1",
+  "description": "MCP Server to assist LLMs and humans on Model Context Protocol (MCP) spec compliance and understanding",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc && copyfiles \"spec/**/*\" dist",
+    "start": "node dist/index.js",
+    "dev": "npx fastmcp dev src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olaservo/mcp-advisor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/olaservo/mcp-advisor/issues"
+  },
+  "homepage": "https://github.com/olaservo/mcp-advisor#readme",
+  "dependencies": {
+    "fastmcp": "^1.20.5",
+    "typescript": "^5.8.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.14",
+    "copyfiles": "^2.4.1"
+  }
+}
