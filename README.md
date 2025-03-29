@@ -55,6 +55,6 @@ npm start
 
 ## Links
 
-- [Model Context Protocol Specification](https://modelcontextprotocol.io)
+- [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/specification/2025-03-26/)
 - [FastMCP Documentation](https://github.com/punkpeye/fastmcp)
 
