@@ -7,15 +7,14 @@
   "type": "module",
   "files": [
     "dist",
-    "spec",
-    "cli.js"
+    "spec"
   ],
   "bin": {
-    "mcp-advisor": "./cli.js"
+    "mcp-advisor": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc && copyfiles \"spec/**/*\" dist",
-    "postbuild": "node -e \"const fs=require('fs'); fs.copyFileSync('dist/index.js', 'cli.js'); if(process.platform !== 'win32') require('child_process').execSync('chmod +x dist/index.js')\"",
+    "postbuild": "node -e \"const fs=require('fs'); fs.copyFileSync('dist/index.js', 'dist/cli.js'); if(process.platform !== 'win32') require('child_process').execSync('chmod +x dist/index.js dist/cli.js')\"",
     "start": "node dist/index.js",
     "dev": "npx fastmcp dev src/index.ts",
     "prepublishOnly": "npm run build"
