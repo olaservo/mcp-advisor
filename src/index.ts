@@ -1,10 +1,11 @@
+#!/usr/bin/env node
 import { FastMCP } from "fastmcp";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 const server = new FastMCP({
   name: "mcp-spec-server",
-  version: "0.0.1",
+  version: "0.0.2",
 });
 
 server.addPrompt({
