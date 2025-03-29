@@ -4,7 +4,7 @@ import schema from "./schema/schema.json" with { type: "json" };
 
 const server = new FastMCP({
   name: "mcp-spec-server",
-  version: "0.0.2",
+  version: "0.0.3",
 });
 
 server.addPrompt({
