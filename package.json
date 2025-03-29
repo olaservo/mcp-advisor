@@ -10,7 +10,7 @@
     "spec"
   ],
   "bin": {
-    "mcp-advisor": "./dist/cli.js"
+    "mcp-advisor": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc && copyfiles \"spec/**/*\" dist",
