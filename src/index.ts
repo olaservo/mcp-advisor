@@ -90,7 +90,7 @@ const server = new Server(
 
 const prompts = [
   {
-    name: 'explain_mcp',
+    name: 'explain',
     description: 'Comprehensive explanation of MCP topics with full documentation context',
     arguments: [
       {
@@ -111,7 +111,7 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
 
-  if (promptName === 'explain_mcp') {
+  if (promptName === 'explain') {
     const topic = request.params.arguments?.topic;
     if (!topic) {
       throw new McpError(
