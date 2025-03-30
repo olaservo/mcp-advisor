@@ -12,13 +12,6 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import schema from './schema/schema.json' with { type: 'json' };
 
-// You may need to install node-fetch if not already installed:
-// npm install node-fetch
-// Also, we'll need jsdom for parsing HTML:
-// npm install jsdom
-// For TypeScript support:
-// npm install --save-dev @types/jsdom
-
 // Define server capabilities - need prompts and resources for this server
 const serverCapabilities: ServerCapabilities = {
   prompts: {},
@@ -99,25 +92,25 @@ const resources = [
     name: 'MCP Specification - Base Protocol',
     uri: 'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/',
     mimeType: 'text/html',
-    description: 'Base protocol details for the Model Context Protocol from the official specification.'
+    description: 'Base protocol details for the Model Context Protocol.'
   },
   {
     name: 'MCP Specification - Utilities',
     uri: 'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/',
     mimeType: 'text/html',
-    description: 'Utility features including ping, cancellation, and progress reporting.'
+    description: 'Utility features including Ping, Cancellation, and Progress Reporting from the Model Context Protocol specification.'
   },
   {
     name: 'MCP Specification - Server Features',
     uri: 'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/',
     mimeType: 'text/html',
-    description: 'Server features including prompts, resources, tools, and server utilities.'
+    description: 'Server features including Prompts, Resources, Tools, and Server Utilities from the Model Context Protocol specification.'
   },
   {
     name: 'MCP Specification - Client Features',
     uri: 'https://spec.modelcontextprotocol.io/specification/2025-03-26/client/',
     mimeType: 'text/html',
-    description: 'Client features including roots and sampling.'
+    description: 'Client features including Roots and Sampling from the Model Context Protocol specification.'
   }
 ];
 
@@ -210,16 +203,16 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   
   if (uri === 'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/') {
     urls = baseProtocolUrls;
-    resourceTitle = 'MCP Specification - Base Protocol (Combined)';
+    resourceTitle = 'MCP Specification - Base Protocol (Combined Documentation)';
   } else if (uri === 'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/') {
     urls = utilitiesUrls;
-    resourceTitle = 'MCP Specification - Utilities (Combined)';
+    resourceTitle = 'MCP Specification - Utilities (Combined Documentation)';
   } else if (uri === 'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/') {
     urls = serverFeaturesUrls;
-    resourceTitle = 'MCP Specification - Server Features (Combined)';
+    resourceTitle = 'MCP Specification - Server Features (Combined Documentation)';
   } else if (uri === 'https://spec.modelcontextprotocol.io/specification/2025-03-26/client/') {
     urls = clientFeaturesUrls;
-    resourceTitle = 'MCP Specification - Client Features (Combined)';
+    resourceTitle = 'MCP Specification - Client Features (Combined Documentation)';
   } else {
     throw new McpError(
       ErrorCode.MethodNotFound,
