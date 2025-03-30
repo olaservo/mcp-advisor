@@ -12,19 +12,16 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import schema from './schema/schema.json' with { type: 'json' };
 
-// Define server capabilities - need prompts and resources for this server
 const serverCapabilities: ServerCapabilities = {
   prompts: {},
   resources: {}
 };
 
-// Create server instance
 const server = new Server(
   { name: 'mcp-advisor', version: '0.0.5' },
   { capabilities: serverCapabilities }
 );
 
-// Define the one prompt we offer
 const prompts = [
   {
     name: 'mcp-spec-latest',
@@ -32,7 +29,6 @@ const prompts = [
   }
 ];
 
-// Set up prompts request handlers
 server.setRequestHandler(ListPromptsRequestSchema, async () => {
   return {
     prompts: prompts
@@ -41,8 +37,7 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
-  
-  // We only have one prompt, so verify it's the one being requested
+
   if (promptName !== 'mcp-spec-latest') {
     throw new McpError(
       ErrorCode.MethodNotFound,
@@ -50,7 +45,6 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     );
   }
   
-  // Return the schema JSON as the prompt content
   return {
     description: 'Provides the complete Model Context Protocol JSON schema specification (2025-03-26) for reference',
     messages: [
@@ -65,12 +59,10 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   };
 });
 
-// Error handler
 server.onerror = (error) => {
   console.error('[MCP Error]', error);
 };
 
-// Start the server with a stdio transport
 async function startServer() {
   try {
     const transport = new StdioServerTransport();
@@ -81,82 +73,85 @@ async function startServer() {
   }
 }
 
-// Handle process signals for clean shutdown
 process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Define the resources we offer
 const resources = [
   {
+    name: 'MCP Specification - Architecture',
+    uri: 'https://github.com/modelcontextprotocol/specification/basic/architecture',
+    mimeType: 'text/markdown',
+    description: 'Overview of the Model Context Protocol architecture.'
+  },
+  {
     name: 'MCP Specification - Base Protocol',
-    uri: 'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/',
-    mimeType: 'text/html',
+    uri: 'https://github.com/modelcontextprotocol/specification/basic',
+    mimeType: 'text/markdown',
     description: 'Base protocol details for the Model Context Protocol.'
   },
   {
     name: 'MCP Specification - Utilities',
-    uri: 'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/',
-    mimeType: 'text/html',
+    uri: 'https://github.com/modelcontextprotocol/specification/utilities',
+    mimeType: 'text/markdown',
     description: 'Utility features including Ping, Cancellation, and Progress Reporting from the Model Context Protocol specification.'
   },
   {
     name: 'MCP Specification - Server Features',
-    uri: 'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/',
-    mimeType: 'text/html',
+    uri: 'https://github.com/modelcontextprotocol/specification/server',
+    mimeType: 'text/markdown',
     description: 'Server features including Prompts, Resources, Tools, and Server Utilities from the Model Context Protocol specification.'
   },
   {
     name: 'MCP Specification - Client Features',
-    uri: 'https://spec.modelcontextprotocol.io/specification/2025-03-26/client/',
-    mimeType: 'text/html',
+    uri: 'https://github.com/modelcontextprotocol/specification/client',
+    mimeType: 'text/markdown',
     description: 'Client features including Roots and Sampling from the Model Context Protocol specification.'
   }
 ];
 
 // List of URLs to combine for Base Protocol
 const baseProtocolUrls = [
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/transports/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/authorization/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle/'
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/basic/_index.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/basic/transports.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/basic/authorization.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/basic/lifecycle.md'
 ];
 
 // List of URLs to combine for Utilities
 const utilitiesUrls = [
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/ping/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/cancellation/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/progress/'
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/basic/utilities/_index.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/basic/utilities/ping.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/basic/utilities/cancellation.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/basic/utilities/progress.md'
 ];
 
 // List of URLs to combine for Server Features
 const serverFeaturesUrls = [
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/prompts/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/resources/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/tools/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/utilities/completion/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/utilities/logging/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/utilities/pagination/'
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/server/_index.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/server/prompts.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/server/resources.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/server/tools.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/server/utilities/completion.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/server/utilities/logging.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/server/utilities/pagination.md'
 ];
 
 // List of URLs to combine for Client Features
 const clientFeaturesUrls = [
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/client/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/client/roots/',
-  'https://spec.modelcontextprotocol.io/specification/2025-03-26/client/sampling/'
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/client/_index.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/client/roots.md',
+  'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/client/sampling.md'
 ];
 
-// Set up resources request handlers
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   return {
     resources: resources
   };
 });
 
-// Helper function to fetch and extract the main content from a URL
-async function fetchMainContent(url: string): Promise<string> {
+// Helper function to fetch Markdown content from a URL
+async function fetchMarkdownContent(url: string): Promise<string> {
   try {
     const fetch = (await import('node-fetch')).default;
     const response = await fetch(url);
@@ -165,32 +160,25 @@ async function fetchMainContent(url: string): Promise<string> {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     
-    const html = await response.text();
+    let markdown = await response.text();
     
-    // Use JSDOM to parse the HTML and extract the main element
-    const { JSDOM } = await import('jsdom');
-    const dom = new JSDOM(html);
-    const mainElement = dom.window.document.querySelector('main');
-    
-    if (!mainElement) {
-      throw new Error(`No main element found in ${url}`);
+    // Process front matter if it exists
+    if (markdown.startsWith('---')) {
+      const secondDash = markdown.indexOf('---', 3);
+      if (secondDash !== -1) {
+        // Remove the front matter
+        markdown = markdown.substring(secondDash + 3).trim();
+      }
     }
     
-    // Add a section title for each page (except the first/main page)
-    if (url !== baseProtocolUrls[0]) {
-      const sectionTitle = dom.window.document.createElement('h2');
-      sectionTitle.textContent = `${url.split('/').filter(Boolean).pop() || 'Section'}`;
-      sectionTitle.style.marginTop = '2em';
-      sectionTitle.style.borderTop = '1px solid #ccc';
-      sectionTitle.style.paddingTop = '1em';
-      mainElement.insertBefore(sectionTitle, mainElement.firstChild);
-    }
+    // Add source URL as reference
+    markdown = markdown + '\n\n---\n*Source: ' + url + '*\n';
     
-    return mainElement.outerHTML;
+    return markdown;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Error fetching content from ${url}:`, error);
-    return `<div class="error">Failed to load content from ${url}: ${errorMessage}</div>`;
+    return `**Error:** Failed to load content from ${url}: ${errorMessage}`;
   }
 }
 
@@ -200,17 +188,22 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   // Determine which resource is being requested and select the appropriate URLs
   let urls: string[] = [];
   let resourceTitle = '';
+  const mimeType = 'text/markdown';
   
-  if (uri === 'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/') {
+  if (uri === 'https://github.com/modelcontextprotocol/specification/basic/architecture') {
+    // For architecture, we just have a single file
+    urls = ['https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/architecture/_index.md'];
+    resourceTitle = 'MCP Specification - Architecture';
+  } else if (uri === 'https://github.com/modelcontextprotocol/specification/basic') {
     urls = baseProtocolUrls;
     resourceTitle = 'MCP Specification - Base Protocol (Combined Documentation)';
-  } else if (uri === 'https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/') {
+  } else if (uri === 'https://github.com/modelcontextprotocol/specification/utilities') {
     urls = utilitiesUrls;
     resourceTitle = 'MCP Specification - Utilities (Combined Documentation)';
-  } else if (uri === 'https://spec.modelcontextprotocol.io/specification/2025-03-26/server/') {
+  } else if (uri === 'https://github.com/modelcontextprotocol/specification/server') {
     urls = serverFeaturesUrls;
     resourceTitle = 'MCP Specification - Server Features (Combined Documentation)';
-  } else if (uri === 'https://spec.modelcontextprotocol.io/specification/2025-03-26/client/') {
+  } else if (uri === 'https://github.com/modelcontextprotocol/specification/client') {
     urls = clientFeaturesUrls;
     resourceTitle = 'MCP Specification - Client Features (Combined Documentation)';
   } else {
@@ -222,47 +215,18 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   
   // We found a supported resource, now fetch and combine the content
   try {
-    // Fetch the main page first to get its structure
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch(uri);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const baseHtml = await response.text();
-    
-    // Use JSDOM to parse the HTML
-    const { JSDOM } = await import('jsdom');
-    const dom = new JSDOM(baseHtml);
-    const document = dom.window.document;
-    
-    // Get the original main element as a container
-    const mainElement = document.querySelector('main');
-    if (!mainElement) {
-      throw new Error('No main element found in the base HTML');
-    }
-    
-    // Clear existing content in main element
-    mainElement.innerHTML = '';
-    
-    // Add a title for the combined document
-    const titleElement = document.createElement('h1');
-    titleElement.textContent = resourceTitle;
-    mainElement.appendChild(titleElement);
+    // Initialize an empty string for the combined markdown
+    let combinedMarkdown = '';
     
     // Fetch content from all URLs and combine them
     const contentPromises = urls.map(async (url, index) => {
-      const content = await fetchMainContent(url);
+      const content = await fetchMarkdownContent(url);
       
       // For all pages except the first one, we want to add a section divider
       if (index > 0) {
-        return `
-          <div class="section-divider" style="margin-top: 2em; border-top: 2px solid #eee; padding-top: 1em;">
-            <h2>Section: ${url.split('/').filter(Boolean).pop() || 'Additional Content'}</h2>
-            ${content}
-          </div>
-        `;
+        const fileName = url.split('/').pop() || '';
+        const sectionName = fileName.replace('.md', '').replace('_index', 'Overview');
+        return `\n\n## ${sectionName}\n\n${content}`;
       }
       return content;
     });
@@ -270,19 +234,17 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     // Wait for all content to be fetched
     const contents = await Promise.all(contentPromises);
     
-    // Add all content to the main element
-    mainElement.innerHTML = contents.join('\n');
-    
-    // Get the complete HTML document
-    const combinedHtml = dom.serialize();
+    // Combine all markdown content
+    const contentWithSections = contents.join('\n\n');
+    combinedMarkdown += contentWithSections;
     
     // Return the combined content
     return {
       contents: [
         {
           uri: uri,
-          text: combinedHtml,
-          mimeType: 'text/html'
+          text: combinedMarkdown,
+          mimeType: mimeType
         }
       ]
     };
