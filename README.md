@@ -35,17 +35,19 @@ npm install -g mcp-advisor
 
 #### Prompts
 
-- `mcp-spec-latest`: Returns the complete MCP JSON schema specification (2025-03-26)
+- `explain`: Comprehensive explanation of MCP topics with full documentation context. Requires a `topic` argument specifying which MCP topic you would like explained in detail.
 
 #### Resources
 
 The server provides access to different sections of the MCP specification documentation:
 
-- **Architecture Overview**: Basic architectural concepts and design principles
-- **Base Protocol**: Core protocol details including transports, authorization, and lifecycle
-- **Utilities**: Documentation for Ping, Cancellation, and Progress Reporting features
-- **Server Features**: Comprehensive guide to Prompts, Resources, Tools, and Server Utilities
-- **Client Features**: Information about Roots and Sampling capabilities
+- **Complete Specification** (`/specification/complete`): The complete Model Context Protocol specification including schema, architecture, base protocol, utilities, server features, and client features
+- **Schema Specification** (`/specification/schema`): The complete Model Context Protocol JSON schema specification (2025-03-26)
+- **Architecture Overview** (`/specification/basic/architecture`): Overview of the Model Context Protocol architecture
+- **Base Protocol** (`/specification/basic`): Core protocol details including transports, authorization, and lifecycle
+- **Utilities** (`/specification/utilities`): Documentation for Ping, Cancellation, and Progress Reporting features
+- **Server Features** (`/specification/server`): Comprehensive guide to Prompts, Resources, Tools, and Server Utilities including completion, logging, and pagination
+- **Client Features** (`/specification/client`): Information about Roots and Sampling capabilities
 
 ### Development
 
