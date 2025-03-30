@@ -90,12 +90,12 @@ const server = new Server(
 
 const prompts = [
   {
-    name: 'learn_mcp',
-    description: 'Learn about different aspects of the Model Context Protocol',
+    name: 'explain_mcp',
+    description: 'Comprehensive explanation of MCP topics with full documentation context',
     arguments: [
       {
         name: 'topic',
-        description: 'Which MCP topic would you like to learn about?',
+        description: 'Which MCP topic would you like explained in detail?',
         required: true
       }
     ]
@@ -111,7 +111,7 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
 
-  if (promptName === 'learn_mcp') {
+  if (promptName === 'explain_mcp') {
     const topic = request.params.arguments?.topic;
     if (!topic) {
       throw new McpError(
@@ -120,16 +120,27 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       );
     }
     
-    let promptText = `I would like to learn more about ${topic} as it relates to the Model Context Protocol.  You MUST always cite your references when you explain topics or answer questions.  You MAY ask the user to provide references to documentation or resources if you do not already have access to them.`;
-
+    const completeSpecResource = resources.find(r => r.uri === 'https://github.com/modelcontextprotocol/specification/complete');
+    const completeDoc = await getCompleteResourceDoc();
     return {
-      description: 'Learn about different aspects of the Model Context Protocol',
+      description: 'Comprehensive explanation of MCP topic with full documentation',
       messages: [
         {
           role: 'user',
           content: {
             type: 'text',
-            text: promptText
+            text: `Please explain ${topic} as it relates to the Model Context Protocol. Include detailed information and examples where possible. You MUST always cite your references when you explain topics or answer questions based on the documentation provided below.  You MAY ask the user to provide additional references to documentation or resources if you do not already have access to them.`
+          }
+        },
+        {
+          role: 'user',
+          content: {
+            type: 'resource',
+            resource: {
+              uri:completeSpecResource?.uri,
+              mimeType:completeSpecResource?.mimeType,
+              text: completeDoc
+            }
           }
         }
       ]
@@ -286,6 +297,51 @@ async function fetchMarkdownContent(url: string): Promise<string> {
   }
 }
 
+async function getCompleteResourceDoc() {
+  try {
+    // Get the schema first
+    const schema = await getSchema();
+    
+    // Fetch all markdown content
+    const architectureContent = await fetchMarkdownContent('https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/architecture/_index.md');
+    
+    // Fetch and combine all section content
+    const baseProtocolContent = await Promise.all(baseProtocolUrls.map(fetchMarkdownContent));
+    const utilitiesContent = await Promise.all(utilitiesUrls.map(fetchMarkdownContent));
+    const serverFeaturesContent = await Promise.all(serverFeaturesUrls.map(fetchMarkdownContent));
+    const clientFeaturesContent = await Promise.all(clientFeaturesUrls.map(fetchMarkdownContent));
+    
+    // Build the complete document
+    let completeDoc = '# Model Context Protocol Complete Specification\n\n';
+    
+    // Add schema section
+    completeDoc += '## JSON Schema\n\n```json\n' + JSON.stringify(schema, null, 2) + '\n```\n\n';
+    
+    // Add architecture section
+    completeDoc += '## Architecture\n\n' + architectureContent + '\n\n';
+    
+    // Add base protocol section
+    completeDoc += '## Base Protocol\n\n' + baseProtocolContent.join('\n\n') + '\n\n';
+    
+    // Add utilities section
+    completeDoc += '## Utilities\n\n' + utilitiesContent.join('\n\n') + '\n\n';
+    
+    // Add server features section
+    completeDoc += '## Server Features\n\n' + serverFeaturesContent.join('\n\n') + '\n\n';
+    
+    // Add client features section
+    completeDoc += '## Client Features\n\n' + clientFeaturesContent.join('\n\n');
+    
+    return completeDoc;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Could not generate complete specification: ${errorMessage}`
+    );
+  }
+}
+
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const uri = request.params.uri;
   
@@ -313,39 +369,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   } else if (uri === 'https://github.com/modelcontextprotocol/specification/complete') {
     // Return the complete specification including schema and all markdown content
     try {
-      // Get the schema first
-      const schema = await getSchema();
-      
-      // Fetch all markdown content
-      const architectureContent = await fetchMarkdownContent('https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/architecture/_index.md');
-      
-      // Fetch and combine all section content
-      const baseProtocolContent = await Promise.all(baseProtocolUrls.map(fetchMarkdownContent));
-      const utilitiesContent = await Promise.all(utilitiesUrls.map(fetchMarkdownContent));
-      const serverFeaturesContent = await Promise.all(serverFeaturesUrls.map(fetchMarkdownContent));
-      const clientFeaturesContent = await Promise.all(clientFeaturesUrls.map(fetchMarkdownContent));
-      
-      // Build the complete document
-      let completeDoc = '# Model Context Protocol Complete Specification\n\n';
-      
-      // Add schema section
-      completeDoc += '## JSON Schema\n\n```json\n' + JSON.stringify(schema, null, 2) + '\n```\n\n';
-      
-      // Add architecture section
-      completeDoc += '## Architecture\n\n' + architectureContent + '\n\n';
-      
-      // Add base protocol section
-      completeDoc += '## Base Protocol\n\n' + baseProtocolContent.join('\n\n') + '\n\n';
-      
-      // Add utilities section
-      completeDoc += '## Utilities\n\n' + utilitiesContent.join('\n\n') + '\n\n';
-      
-      // Add server features section
-      completeDoc += '## Server Features\n\n' + serverFeaturesContent.join('\n\n') + '\n\n';
-      
-      // Add client features section
-      completeDoc += '## Client Features\n\n' + clientFeaturesContent.join('\n\n');
-      
+      const completeDoc = await getCompleteResourceDoc();
       return {
         contents: [
           {
