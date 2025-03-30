@@ -90,8 +90,15 @@ const server = new Server(
 
 const prompts = [
   {
-    name: 'mcp-spec-latest',
-    description: 'Provides the complete Model Context Protocol JSON schema specification (2025-03-26) for reference'
+    name: 'learn_mcp',
+    description: 'Learn about different aspects of the Model Context Protocol',
+    arguments: [
+      {
+        name: 'topic',
+        description: 'Which MCP topic would you like to learn about?',
+        required: true
+      }
+    ]
   }
 ];
 
@@ -104,27 +111,35 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
 
-  if (promptName !== 'mcp-spec-latest') {
-    throw new McpError(
-      ErrorCode.MethodNotFound,
-      `Unknown prompt: ${promptName}`
-    );
-  }
-  
-  const schema = await getSchema();
-  
-  return {
-    description: 'Provides the complete Model Context Protocol JSON schema specification (2025-03-26) for reference',
-    messages: [
-      {
-        role: 'user',
-        content: {
-          type: 'text',
-          text: JSON.stringify(schema)
+  if (promptName === 'learn_mcp') {
+    const topic = request.params.arguments?.topic;
+    if (!topic) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Topic argument is required'
+      );
+    }
+    
+    let promptText = `I would like to learn more about ${topic} as it relates to the Model Context Protocol.  You MUST always cite your references when you explain topics or answer questions.  You MAY ask the user to provide references to documentation or resources if you do not already have access to them.`;
+
+    return {
+      description: 'Learn about different aspects of the Model Context Protocol',
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: promptText
+          }
         }
-      }
-    ]
-  };
+      ]
+    };
+  }
+
+  throw new McpError(
+    ErrorCode.MethodNotFound,
+    `Unknown prompt: ${promptName}`
+  );
 });
 
 server.onerror = (error) => {
@@ -146,6 +161,12 @@ process.on('SIGINT', () => {
 });
 
 const resources = [
+  {
+    name: 'MCP Schema Specification',
+    uri: 'https://github.com/modelcontextprotocol/specification/schema',
+    mimeType: 'application/json',
+    description: 'The complete Model Context Protocol JSON schema specification (2025-03-26)'
+  },
   {
     name: 'MCP Specification - Architecture',
     uri: 'https://github.com/modelcontextprotocol/specification/basic/architecture',
@@ -283,6 +304,26 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   } else if (uri === 'https://github.com/modelcontextprotocol/specification/client') {
     urls = clientFeaturesUrls;
     resourceTitle = 'MCP Specification - Client Features (Combined Documentation)';
+  } else if (uri === 'https://github.com/modelcontextprotocol/specification/schema') {
+    // Return the schema as JSON
+    try {
+      const schema = await getSchema();
+      return {
+        contents: [
+          {
+            uri: uri,
+            text: JSON.stringify(schema, null, 2),
+            mimeType: 'application/json'
+          }
+        ]
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Could not read schema resource: ${errorMessage}`
+      );
+    }
   } else {
     throw new McpError(
       ErrorCode.MethodNotFound,
