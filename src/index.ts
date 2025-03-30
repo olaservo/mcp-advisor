@@ -10,7 +10,73 @@ import {
   McpError,
   ErrorCode
 } from '@modelcontextprotocol/sdk/types.js';
-import schema from './schema/schema.json' with { type: 'json' };
+// Generic caching mechanism
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+class Cache {
+  private static cache: Map<string, CacheEntry<any>> = new Map();
+  private static TTL = 3600000; // 1 hour in milliseconds
+
+  static get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (entry && (Date.now() - entry.timestamp) < this.TTL) {
+      return entry.data;
+    }
+    return null;
+  }
+
+  static set<T>(key: string, data: T): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+
+  static getExpired<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    return entry ? entry.data : null;
+  }
+}
+
+const SCHEMA_URL = 'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/2025-03-26/schema.json';
+
+async function getSchema(): Promise<any> {
+  const cached = Cache.get<any>(SCHEMA_URL);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(SCHEMA_URL);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    const schema = await response.json();
+    Cache.set(SCHEMA_URL, schema);
+    return schema;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Failed to fetch schema:', errorMessage);
+    
+    // If we have a cached version, return it even if expired
+    const expired = Cache.getExpired<any>(SCHEMA_URL);
+    if (expired) {
+      console.error('Using expired cache as fallback');
+      return expired;
+    }
+    
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to fetch schema: ${errorMessage}`
+    );
+  }
+}
 
 const serverCapabilities: ServerCapabilities = {
   prompts: {},
@@ -44,6 +110,8 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       `Unknown prompt: ${promptName}`
     );
   }
+  
+  const schema = await getSchema();
   
   return {
     description: 'Provides the complete Model Context Protocol JSON schema specification (2025-03-26) for reference',
@@ -152,6 +220,11 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 
 // Helper function to fetch Markdown content from a URL
 async function fetchMarkdownContent(url: string): Promise<string> {
+  const cached = Cache.get<string>(url);
+  if (cached) {
+    return cached;
+  }
+
   try {
     const fetch = (await import('node-fetch')).default;
     const response = await fetch(url);
@@ -174,10 +247,14 @@ async function fetchMarkdownContent(url: string): Promise<string> {
     // Add source URL as reference
     markdown = markdown + '\n\n---\n*Source: ' + url + '*\n';
     
+    Cache.set(url, markdown);
     return markdown;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Error fetching content from ${url}:`, error);
+    
+    // For markdown content, we don't use expired cache on error
+    // Instead return an error message that can be displayed
     return `**Error:** Failed to load content from ${url}: ${errorMessage}`;
   }
 }

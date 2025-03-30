@@ -38,14 +38,11 @@
   "homepage": "https://github.com/olaservo/mcp-advisor#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
-    "jsdom": "^26.0.0",
     "node-fetch": "^3.3.2",
     "typescript": "^5.8.2",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/jsdom": "^21.1.7",
-    "@types/node": "^22.13.14",
-    "copyfiles": "^2.4.1"
+    "@types/node": "^22.13.14"
   }
 }
