@@ -1,6 +1,6 @@
 {
   "name": "mcp-advisor",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "MCP Server to assist LLMs and humans on Model Context Protocol (MCP) spec compliance and understanding",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

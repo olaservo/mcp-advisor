@@ -84,7 +84,7 @@ const serverCapabilities: ServerCapabilities = {
 };
 
 const server = new Server(
-  { name: 'mcp-advisor', version: '0.0.5' },
+  { name: 'mcp-advisor', version: '0.0.6' },
   { capabilities: serverCapabilities }
 );
 
