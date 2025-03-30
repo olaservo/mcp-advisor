@@ -162,6 +162,12 @@ process.on('SIGINT', () => {
 
 const resources = [
   {
+    name: 'MCP Complete Specification',
+    uri: 'https://github.com/modelcontextprotocol/specification/complete',
+    mimeType: 'text/markdown',
+    description: 'The complete Model Context Protocol specification including schema, architecture, base protocol, utilities, server features, and client features'
+  },
+  {
     name: 'MCP Schema Specification',
     uri: 'https://github.com/modelcontextprotocol/specification/schema',
     mimeType: 'application/json',
@@ -304,6 +310,58 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   } else if (uri === 'https://github.com/modelcontextprotocol/specification/client') {
     urls = clientFeaturesUrls;
     resourceTitle = 'MCP Specification - Client Features (Combined Documentation)';
+  } else if (uri === 'https://github.com/modelcontextprotocol/specification/complete') {
+    // Return the complete specification including schema and all markdown content
+    try {
+      // Get the schema first
+      const schema = await getSchema();
+      
+      // Fetch all markdown content
+      const architectureContent = await fetchMarkdownContent('https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/tags/2025-03-26/docs/specification/2025-03-26/architecture/_index.md');
+      
+      // Fetch and combine all section content
+      const baseProtocolContent = await Promise.all(baseProtocolUrls.map(fetchMarkdownContent));
+      const utilitiesContent = await Promise.all(utilitiesUrls.map(fetchMarkdownContent));
+      const serverFeaturesContent = await Promise.all(serverFeaturesUrls.map(fetchMarkdownContent));
+      const clientFeaturesContent = await Promise.all(clientFeaturesUrls.map(fetchMarkdownContent));
+      
+      // Build the complete document
+      let completeDoc = '# Model Context Protocol Complete Specification\n\n';
+      
+      // Add schema section
+      completeDoc += '## JSON Schema\n\n```json\n' + JSON.stringify(schema, null, 2) + '\n```\n\n';
+      
+      // Add architecture section
+      completeDoc += '## Architecture\n\n' + architectureContent + '\n\n';
+      
+      // Add base protocol section
+      completeDoc += '## Base Protocol\n\n' + baseProtocolContent.join('\n\n') + '\n\n';
+      
+      // Add utilities section
+      completeDoc += '## Utilities\n\n' + utilitiesContent.join('\n\n') + '\n\n';
+      
+      // Add server features section
+      completeDoc += '## Server Features\n\n' + serverFeaturesContent.join('\n\n') + '\n\n';
+      
+      // Add client features section
+      completeDoc += '## Client Features\n\n' + clientFeaturesContent.join('\n\n');
+      
+      return {
+        contents: [
+          {
+            uri: uri,
+            text: completeDoc,
+            mimeType: 'text/markdown'
+          }
+        ]
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Could not generate complete specification: ${errorMessage}`
+      );
+    }
   } else if (uri === 'https://github.com/modelcontextprotocol/specification/schema') {
     // Return the schema as JSON
     try {
