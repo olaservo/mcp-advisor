@@ -256,6 +256,23 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
   };
 });
 
+// Helper function to transform raw GitHub URLs to regular GitHub URLs
+function transformGitHubUrl(url: string): string {
+  if (url.startsWith('https://raw.githubusercontent.com/')) {
+    const parts = url.replace('https://raw.githubusercontent.com/', '').split('/');
+    const org = parts[0];
+    const repo = parts[1];
+    const tagsIndex = parts.indexOf('tags');
+    if (tagsIndex !== -1 && parts.length > tagsIndex + 1) {
+      const version = parts[tagsIndex + 1];
+      const pathParts = parts.slice(tagsIndex + 2);
+      const path = pathParts.join('/');
+      return `https://github.com/${org}/${repo}/blob/${version}/${path}`;
+    }
+  }
+  return url;
+}
+
 // Helper function to fetch Markdown content from a URL
 async function fetchMarkdownContent(url: string): Promise<string> {
   const cached = Cache.get<string>(url);
@@ -282,8 +299,9 @@ async function fetchMarkdownContent(url: string): Promise<string> {
       }
     }
     
-    // Add source URL as reference
-    markdown = markdown + '\n\n---\n*Source: ' + url + '*\n';
+    // Add source URL as reference with transformed GitHub URL
+    const displayUrl = transformGitHubUrl(url);
+    markdown = markdown + '\n\n---\n*Source: [' + displayUrl + '](' + displayUrl + ')*\n';
     
     Cache.set(url, markdown);
     return markdown;
