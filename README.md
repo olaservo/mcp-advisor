@@ -55,6 +55,8 @@ The server provides access to different sections of the MCP specification docume
 - **Server Features** (`/specification/server`): Comprehensive guide to Prompts, Resources, Tools, and Server Utilities including completion, logging, and pagination
 - **Client Features** (`/specification/client`): Information about Roots and Sampling capabilities
 
+All specification content fetched from GitHub is cached locally with a 1-hour TTL (time-to-live) to improve performance and reduce API calls. If a fetch fails, the server will attempt to use expired cached content as a fallback when available.
+
 ### Development
 
 ```bash
