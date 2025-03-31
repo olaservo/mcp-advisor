@@ -84,7 +84,7 @@ const serverCapabilities: ServerCapabilities = {
 };
 
 const server = new Server(
-  { name: 'mcp-advisor', version: '0.0.7' },
+  { name: 'mcp-advisor', version: '0.0.8' },
   { capabilities: serverCapabilities }
 );
 
@@ -129,7 +129,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
           role: 'user',
           content: {
             type: 'text',
-            text: `Please explain ${topic} as it relates to the Model Context Protocol. Include detailed information and examples where possible. You MUST always cite your references when you explain topics or answer questions based on the documentation provided below.  You MAY ask the user to provide additional references to documentation or resources if you do not already have access to them.`
+            text: `Please explain ${topic} as it relates to the Model Context Protocol. Include detailed information and examples where possible. You MUST always cite your references when you explain topics or answer questions based on the documentation provided below, and you MUST render a clickable link to the source when applicable.  You MAY ask the user to provide additional references to documentation or resources if you do not already have access to them.`
           }
         },
         {
