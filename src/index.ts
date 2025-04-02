@@ -7,6 +7,7 @@ import {
   ListPromptsRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
+  CompleteRequestSchema,
   McpError,
   ErrorCode
 } from '@modelcontextprotocol/sdk/types.js';
@@ -42,6 +43,13 @@ class Cache {
 }
 
 const SCHEMA_URL = 'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/2025-03-26/schema.json';
+
+// Suggested topics
+const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'why not just use http?', 'why does this protocol need to exist?'];
+// Include all prompt names here
+const EXPLAIN_PROMPT = 'explain';
+const EVALUATE_SERVER_PROMPT = 'evaluate_server_compliance';
+const EVALUATE_SDK_PROMPT = 'evaluate_sdk_compliance';
 
 async function getSchema(): Promise<any> {
   const cached = Cache.get<any>(SCHEMA_URL);
@@ -80,7 +88,8 @@ async function getSchema(): Promise<any> {
 
 const serverCapabilities: ServerCapabilities = {
   prompts: {},
-  resources: {}
+  resources: {},
+  completions: {}
 };
 
 const server = new Server(
@@ -90,12 +99,23 @@ const server = new Server(
 
 const prompts = [
   {
-    name: 'explain',
+    name: EXPLAIN_PROMPT,
     description: 'Comprehensive explanation of MCP topics with full documentation context',
     arguments: [
       {
         name: 'topic',
-        description: 'Which MCP topic would you like explained in detail?',
+        description: 'Which MCP topic would you like explained in detail? Feel free to phrase as a question.',
+        required: true
+      }
+    ]
+  },
+  {
+    name: EVALUATE_SERVER_PROMPT,
+    description: 'Evaluates MCP specification compliance for a given server repository',
+    arguments: [
+      {
+        name: 'path',
+        description: 'Path to the MCP server repository to evaluate.',
         required: true
       }
     ]
@@ -111,7 +131,41 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
 
-  if (promptName === 'explain') {
+  if (promptName === EVALUATE_SERVER_PROMPT) {
+    const path = request.params.arguments?.path;
+    if (!path) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Path argument is required'
+      );
+    }
+    
+    const completeSpecResource = resources.find(r => r.uri === 'https://github.com/modelcontextprotocol/specification/complete');
+    const completeDoc = await getCompleteResourceDoc();
+    return {
+      description: 'MCP specification compliance evaluation for server repository',
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `Please evaluate the MCP server implementation at path: ${path} for compliance with the full specification provided below.  Pay special attention to the MUST statements in the spec and non-optional features before moving on to SHOULD statements and/or optional enhancements.`
+          }
+        },
+        {
+          role: 'user',
+          content: {
+            type: 'resource',
+            resource: {
+              uri: completeSpecResource?.uri,
+              mimeType: completeSpecResource?.mimeType,
+              text: completeDoc
+            }
+          }
+        }
+      ]
+    };
+  } else if (promptName === EXPLAIN_PROMPT) {
     const topic = request.params.arguments?.topic;
     if (!topic) {
       throw new McpError(
@@ -152,6 +206,27 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     `Unknown prompt: ${promptName}`
   );
 });
+
+server.setRequestHandler(CompleteRequestSchema, async (request) => {
+    const { ref, argument } = request.params;
+    if (ref.type === "ref/prompt") {
+      // Filter topics that start with the input value if provided
+      const values = argument?.value 
+        ? TOPIC_COMPLETIONS.filter(topic => topic.toLowerCase().startsWith(argument.value.toLowerCase()))
+        : TOPIC_COMPLETIONS;
+      return { 
+        completion: { 
+          values,
+          hasMore: false, 
+          total: values.length 
+        } 
+      };
+    }
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `Unknown reference type passed in completion request`
+    );
+  });
 
 server.onerror = (error) => {
   console.error('[MCP Error]', error);
