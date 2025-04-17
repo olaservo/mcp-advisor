@@ -8,6 +8,14 @@ While the same information is already available on the web, if you have a use ca
 
 Since these resources should easily fit within a model's context window, using a more complex RAG solution is not really necessary unless you need to compare documents to other documents, or do more complex types of querying.
 
+## Other ways to do the same thing
+
+If you prefer a more ad-hoc approach you can also use an MCP server like [fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) to do the following:
+
+1. Fetch the contents of https://modelcontextprotocol.io/llms.txt to get the list of valid links
+2. Fetch content from links that are relevant to the current task
+
+
 ## Installation
 
 ```bash
@@ -42,11 +50,13 @@ npm install -g mcp-advisor
 #### Prompts
 
 - `explain`: Comprehensive explanation of MCP topics with full documentation context. Requires a `topic` argument specifying which MCP topic you would like explained in detail.
+- `evaluate_server_compliance`: Evaluates Model Context Protocol (MCP) specification compliance for a given server repository. Requires a `path` argument specifying the path to the MCP server repository to evaluate.
 
 #### Resources
 
-The server provides access to different sections of the MCP specification documentation:
+The server provides access to different sections of the MCP specification and documentation:
 
+**Specification Resources**
 - **Complete Specification** (`/specification/complete`): The complete Model Context Protocol specification including schema, architecture, base protocol, utilities, server features, and client features
 - **Schema Specification** (`/specification/schema`): The complete Model Context Protocol JSON schema specification (2025-03-26)
 - **Architecture Overview** (`/specification/basic/architecture`): Overview of the Model Context Protocol architecture
@@ -55,7 +65,14 @@ The server provides access to different sections of the MCP specification docume
 - **Server Features** (`/specification/server`): Comprehensive guide to Prompts, Resources, Tools, and Server Utilities including completion, logging, and pagination
 - **Client Features** (`/specification/client`): Information about Roots and Sampling capabilities
 
-All specification content fetched from GitHub is cached locally with a 1-hour TTL (time-to-live) to improve performance and reduce API calls. If a fetch fails, the server will attempt to use expired cached content as a fallback when available.
+**Additional Documentation**
+- **Getting Started** (`/quickstart`): Getting started guides for client developers, server developers, and users
+- **Development** (`/development`): Development resources including contributing guidelines, roadmap, and updates
+- **SDK Documentation** (`/sdk`): SDK documentation for various programming languages
+- **Tutorials & Examples** (`/tutorials`): Tutorials, examples, and implementation guides
+- **General Documentation** (`/docs`): General documentation including FAQs, introduction, and client list
+
+All specification content is fetched from a list provided by [a standardized llms.txt file](https://llmstxt.org/) (except for the schema.json which is fetched from GitHub) and cached locally with a 1-hour TTL (time-to-live) to improve performance. If a fetch fails, the server will attempt to use expired cached content as a fallback when available.
 
 ### Development
 
