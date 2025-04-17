@@ -1,0 +1,138 @@
+# MCP Server Compliance Status DEMO ONLY NOT ACCURATE
+id: example-server
+name: Example MCP Server
+repository: https://github.com/example/mcp-server
+latestVersion: 1.0.0
+releaseDate: "2025-03-30"
+implementationLanguage: TypeScript
+specVersion: "2025-03-26"
+
+# Server capabilities declared during initialization
+capabilities:
+  # Which capabilities the server advertises
+  prompts:
+    supported: true
+    listChanged: true
+    
+  resources:
+    supported: true
+    subscribe: true
+    listChanged: true
+    
+  tools:
+    supported: true
+    listChanged: true
+    
+  logging:
+    supported: true
+    
+  completions:
+    supported: true
+    
+  experimental:
+    supported: false
+
+# Protocol compliance
+compliance:
+  # Base Protocol
+  jsonrpc:
+    status: complete  # complete, partial, planned, incomplete
+    notes: "Full JSON-RPC 2.0 support with batching"
+    
+  transport-stdio:
+    status: complete
+    notes: "Bidirectional stdio transport"
+    
+  transport-http:
+    status: partial
+    notes: "HTTP support without SSE resumability"
+    missingFeatures:
+      - "Event ID tracking for resumability"
+      - "Last-Event-ID header handling"
+    
+  auth:
+    status: complete
+    notes: "OAuth 2.1 implementation"
+    
+  lifecycle:
+    status: complete
+    notes: "Protocol lifecycle management"
+  
+  # Server Features
+  server-prompts:
+    status: complete
+    notes: "Full prompts API implementation"
+    supportedContentTypes:
+      - "text"
+      - "image"
+      - "audio"
+      - "resource"
+    
+  server-resources:
+    status: complete
+    notes: "Resources API with URI templates"
+    supportedSchemes:
+      - "file://"
+      - "https://"
+      - "git://"
+    
+  server-tools:
+    status: partial
+    notes: "Basic tool functionality"
+    missingFeatures:
+      - "Tool annotations"
+    supportedContentTypes:
+      - "text"
+      - "image"
+      - "audio"
+      - "resource"
+  
+  # Utilities
+  util-ping:
+    status: complete
+    notes: "Ping implementation"
+    
+  util-cancel:
+    status: complete
+    notes: "Cancellation notification support"
+    
+  util-progress:
+    status: complete
+    notes: "Progress notification support"
+    
+  util-logging:
+    status: complete
+    notes: "All RFC 5424 severity levels"
+    
+  util-completion:
+    status: complete
+    notes: "Argument completion"
+    supportedReferenceTypes:
+      - "ref/prompt"
+      - "ref/resource"
+    
+  util-pagination:
+    status: complete
+    notes: "Cursor-based pagination"
+
+# Server-specific implementation details
+implementationDetails:
+  # Transport details
+  transportDetails:
+    stdio:
+      supported: true
+    http:
+      supported: true
+      supportsSSE: true
+      supportsBatching: true
+      supportsSessionManagement: true
+  
+  # Content type support
+  contentTypeSupport:
+    text: true
+    image: true
+    audio: false
+  
+  # Security features
+  security:
+    inputValidation: true
