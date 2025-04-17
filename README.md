@@ -8,6 +8,14 @@ While the same information is already available on the web, if you have a use ca
 
 Since these resources should easily fit within a model's context window, using a more complex RAG solution is not really necessary unless you need to compare documents to other documents, or do more complex types of querying.
 
+## Other ways to do the same thing
+
+If you prefer a more ad-hoc approach you can also use an MCP server like [fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) to do the following:
+
+1. Fetch the contents of https://modelcontextprotocol.io/llms.txt to get the list of valid links
+2. Fetch content from links that are relevant to the current task
+
+
 ## Installation
 
 ```bash
