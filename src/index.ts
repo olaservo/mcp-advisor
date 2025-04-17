@@ -101,7 +101,7 @@ const server = new Server(
 const prompts = [
   {
     name: EXPLAIN_PROMPT,
-    description: 'Comprehensive explanation of MCP topics with full documentation context',
+    description: 'Comprehensive explanation of Model Context Protocol (MCP) topics with full documentation context',
     arguments: [
       {
         name: 'topic',
@@ -112,7 +112,7 @@ const prompts = [
   },
   {
     name: EVALUATE_SERVER_PROMPT,
-    description: 'Evaluates MCP specification compliance for a given server repository',
+    description: 'Evaluates Model Context Protocol (MCP) specification compliance for a given server repository',
     arguments: [
       {
         name: 'path',
@@ -144,7 +144,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     const completeSpecResource = resources.find(r => r.uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`);
     const completeDoc = await getCompleteResourceDoc();
     return {
-      description: 'MCP specification compliance evaluation for server repository',
+      description: 'Model Context Protocol (MCP) specification compliance evaluation for server repository',
       messages: [
         {
           role: 'user',
@@ -178,7 +178,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     const completeSpecResource = resources.find(r => r.uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`);
     const completeDoc = await getCompleteResourceDoc();
     return {
-      description: 'Comprehensive explanation of MCP topic with full documentation',
+      description: 'Comprehensive explanation of Model Context Protocol (MCP) topic with full documentation',
       messages: [
         {
           role: 'user',
@@ -256,7 +256,7 @@ const resources = [
     description: 'The complete Model Context Protocol specification including schema, architecture, base protocol, utilities, server features, and client features'
   },
   {
-    name: 'MCP Schema Specification',
+    name: 'MCP Specification JSON Schema',
     uri: `https://modelcontextprotocol.io/specification/${VERSION}/schema.json`,
     mimeType: 'application/json',
     description: `The complete Model Context Protocol JSON schema specification (${VERSION})`
