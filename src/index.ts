@@ -49,7 +49,6 @@ const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling',
 // Include all prompt names here
 const EXPLAIN_PROMPT = 'explain';
 const EVALUATE_SERVER_PROMPT = 'evaluate_server_compliance';
-const EVALUATE_SDK_PROMPT = 'evaluate_sdk_compliance';
 
 async function getSchema(): Promise<any> {
   const cached = Cache.get<any>(SCHEMA_URL);
@@ -247,6 +246,7 @@ process.on('SIGINT', () => {
 });
 
 const resources = [
+  // Specification Resources
   {
     name: 'MCP Complete Specification',
     uri: 'https://modelcontextprotocol.io/specification/2025-03-26/index.md',
@@ -288,11 +288,43 @@ const resources = [
     uri: 'https://modelcontextprotocol.io/specification/2025-03-26/client/index.md',
     mimeType: 'text/markdown',
     description: 'Client features including Roots and Sampling from the Model Context Protocol specification.'
+  },
+  
+  // Additional Documentation Resources
+  {
+    name: 'MCP Getting Started',
+    uri: 'https://modelcontextprotocol.io/quickstart/index.md',
+    mimeType: 'text/markdown',
+    description: 'Getting started guides for client developers, server developers, and users'
+  },
+  {
+    name: 'MCP Development',
+    uri: 'https://modelcontextprotocol.io/development/index.md',
+    mimeType: 'text/markdown',
+    description: 'Development resources including contributing guidelines, roadmap, and updates'
+  },
+  {
+    name: 'MCP SDK Documentation',
+    uri: 'https://modelcontextprotocol.io/sdk/index.md',
+    mimeType: 'text/markdown',
+    description: 'SDK documentation for various programming languages'
+  },
+  {
+    name: 'MCP Tutorials & Examples',
+    uri: 'https://modelcontextprotocol.io/tutorials/index.md',
+    mimeType: 'text/markdown',
+    description: 'Tutorials, examples, and implementation guides'
+  },
+  {
+    name: 'MCP General Documentation',
+    uri: 'https://modelcontextprotocol.io/docs/index.md',
+    mimeType: 'text/markdown',
+    description: 'General documentation including FAQs, introduction, and client list'
   }
 ];
 
 // Helper function to fetch and parse links from llms.txt
-async function fetchLinksList(): Promise<string[]> {
+export async function fetchLinksList(): Promise<string[]> {
   const cached = Cache.get<string[]>('llms.txt');
   if (cached) {
     return cached;
@@ -349,8 +381,34 @@ async function fetchFullContent(): Promise<string> {
 }
 
 // Helper function to filter URLs by section
-function filterUrlsBySection(links: string[], section: string): string[] {
-  return links.filter(url => url.includes(section));
+export function filterUrlsBySection(links: string[], section: string): string[] {
+  // Skip empty links and "MCP" entries
+  const validLinks = links.filter(url => url && url !== 'MCP');
+
+  // Handle regex patterns
+  if (section.startsWith('^')) {
+    const regex = new RegExp(section);
+    return validLinks.filter(url => {
+      const urlPath = url.split('/').pop() || '';
+      return regex.test(urlPath);
+    });
+  }
+
+  // Handle GitHub SDK repositories
+  if (section === 'github.com/modelcontextprotocol/') {
+    return validLinks.filter(url => url.startsWith('https://github.com/modelcontextprotocol/'));
+  }
+
+  // Handle top-level documentation files
+  if (section === '/docs/') {
+    return validLinks.filter(url => {
+      const parts = url.split('/');
+      return parts.length === 4 && parts[3].endsWith('.md');
+    });
+  }
+
+  // Default case: match by section path
+  return validLinks.filter(url => url.includes(section));
 }
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
@@ -494,6 +552,26 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         `Could not generate complete specification: ${errorMessage}`
       );
     }
+  } else if (uri === 'https://modelcontextprotocol.io/quickstart/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/quickstart/');
+    resourceTitle = 'MCP Getting Started';
+  } else if (uri === 'https://modelcontextprotocol.io/development/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/development/');
+    resourceTitle = 'MCP Development';
+  } else if (uri === 'https://modelcontextprotocol.io/sdk/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/sdk/');
+    resourceTitle = 'MCP SDK Documentation';
+  } else if (uri === 'https://modelcontextprotocol.io/tutorials/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/tutorials/');
+    resourceTitle = 'MCP Tutorials & Examples';
+  } else if (uri === 'https://modelcontextprotocol.io/docs/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/docs/');
+    resourceTitle = 'MCP General Documentation';
   } else if (uri === 'https://modelcontextprotocol.io/specification/2025-03-26/schema.json') {
     // Return the schema as JSON
     try {
