@@ -64,7 +64,7 @@ The server provides access to different sections of the MCP specification and do
 - **Tutorials & Examples** (`/tutorials`): Tutorials, examples, and implementation guides
 - **General Documentation** (`/docs`): General documentation including FAQs, introduction, and client list
 
-All specification content is fetched from standardized llms.txt files (except for the schema.json which is fetched from GitHub) and cached locally with a 1-hour TTL (time-to-live) to improve performance. If a fetch fails, the server will attempt to use expired cached content as a fallback when available.
+All specification content is fetched from a list provided by [a standardized llms.txt file](https://llmstxt.org/) (except for the schema.json which is fetched from GitHub) and cached locally with a 1-hour TTL (time-to-live) to improve performance. If a fetch fails, the server will attempt to use expired cached content as a fallback when available.
 
 ### Development
 
