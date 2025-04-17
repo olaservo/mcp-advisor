@@ -354,34 +354,6 @@ export async function fetchLinksList(): Promise<string[]> {
   }
 }
 
-// Helper function to fetch complete content from llms-full.txt
-async function fetchFullContent(): Promise<string> {
-  const cached = Cache.get<string>('llms-full.txt');
-  if (cached) {
-    return cached;
-  }
-
-  try {
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch('https://modelcontextprotocol.io/llms-full.txt');
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const content = await response.text();
-    Cache.set('llms-full.txt', content);
-    return content;
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Failed to fetch full content:', errorMessage);
-    throw new McpError(
-      ErrorCode.InternalError,
-      `Failed to fetch full content: ${errorMessage}`
-    );
-  }
-}
-
 // Helper function to filter URLs by section
 export function filterUrlsBySection(links: string[], section: string): string[] {
   // Skip empty links and "MCP" entries, and filter to latest version
@@ -469,8 +441,12 @@ async function getCompleteResourceDoc() {
     // Get the schema first
     const schema = await getSchema();
     
-    // Fetch the complete content from llms-full.txt
-    const completeContent = await fetchFullContent();
+    // Get all links and filter for specification URLs matching our version
+    const allLinks = await fetchLinksList();
+    const specLinks = allLinks.filter(url => 
+      url.includes(`/specification/${VERSION}/`) && 
+      !url.includes('schema.json')  // Exclude schema.json as we handle it separately
+    );
     
     // Build the complete document
     let completeDoc = '# Model Context Protocol Complete Specification\n\n';
@@ -478,8 +454,32 @@ async function getCompleteResourceDoc() {
     // Add schema section
     completeDoc += '## JSON Schema\n\n```json\n' + JSON.stringify(schema, null, 2) + '\n```\n\n';
     
-    // Add the complete content
-    completeDoc += completeContent;
+    // Define the order of sections
+    const sections = [
+      'architecture',
+      'basic',
+      'basic/utilities',
+      'client',
+      'server',
+      'server/utilities'
+    ];
+    
+    // Fetch and combine content for each section
+    for (const section of sections) {
+      const sectionLinks = filterUrlsBySection(specLinks, `/${section}/`);
+      
+      // Skip empty sections
+      if (sectionLinks.length === 0) continue;
+      
+      // Fetch content from all URLs in this section
+      const contentPromises = sectionLinks.map(url => fetchMarkdownContent(url));
+      const contents = await Promise.all(contentPromises);
+      
+      // Add section content
+      const sectionTitle = section.split('/').pop() || section;
+      completeDoc += `\n\n## ${sectionTitle.charAt(0).toUpperCase() + sectionTitle.slice(1)}\n\n`;
+      completeDoc += contents.join('\n\n');
+    }
     
     return completeDoc;
   } catch (error: unknown) {
