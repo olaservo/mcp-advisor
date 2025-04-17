@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+export const VERSION = '2025-03-26';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { 
@@ -42,7 +44,7 @@ class Cache {
   }
 }
 
-const SCHEMA_URL = 'https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/2025-03-26/schema.json';
+const SCHEMA_URL = `https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/${VERSION}/schema.json`;
 
 // Suggested topics
 const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'why not just use http?', 'why does this protocol need to exist?'];
@@ -139,7 +141,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       );
     }
     
-    const completeSpecResource = resources.find(r => r.uri === 'https://modelcontextprotocol.io/specification/2025-03-26/index.md');
+    const completeSpecResource = resources.find(r => r.uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`);
     const completeDoc = await getCompleteResourceDoc();
     return {
       description: 'MCP specification compliance evaluation for server repository',
@@ -173,7 +175,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       );
     }
     
-    const completeSpecResource = resources.find(r => r.uri === 'https://modelcontextprotocol.io/specification/2025-03-26/index.md');
+    const completeSpecResource = resources.find(r => r.uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`);
     const completeDoc = await getCompleteResourceDoc();
     return {
       description: 'Comprehensive explanation of MCP topic with full documentation',
@@ -249,43 +251,43 @@ const resources = [
   // Specification Resources
   {
     name: 'MCP Complete Specification',
-    uri: 'https://modelcontextprotocol.io/specification/2025-03-26/index.md',
+    uri: `https://modelcontextprotocol.io/specification/${VERSION}/index.md`,
     mimeType: 'text/markdown',
     description: 'The complete Model Context Protocol specification including schema, architecture, base protocol, utilities, server features, and client features'
   },
   {
     name: 'MCP Schema Specification',
-    uri: 'https://modelcontextprotocol.io/specification/2025-03-26/schema.json',
+    uri: `https://modelcontextprotocol.io/specification/${VERSION}/schema.json`,
     mimeType: 'application/json',
-    description: 'The complete Model Context Protocol JSON schema specification (2025-03-26)'
+    description: `The complete Model Context Protocol JSON schema specification (${VERSION})`
   },
   {
     name: 'MCP Specification - Architecture',
-    uri: 'https://modelcontextprotocol.io/specification/2025-03-26/architecture/index.md',
+    uri: `https://modelcontextprotocol.io/specification/${VERSION}/architecture/index.md`,
     mimeType: 'text/markdown',
     description: 'Overview of the Model Context Protocol architecture.'
   },
   {
     name: 'MCP Specification - Base Protocol',
-    uri: 'https://modelcontextprotocol.io/specification/2025-03-26/basic/index.md',
+    uri: `https://modelcontextprotocol.io/specification/${VERSION}/basic/index.md`,
     mimeType: 'text/markdown',
     description: 'Base protocol details for the Model Context Protocol.'
   },
   {
     name: 'MCP Specification - Utilities',
-    uri: 'https://modelcontextprotocol.io/specification/2025-03-26/basic/utilities/index.md',
+    uri: `https://modelcontextprotocol.io/specification/${VERSION}/basic/utilities/index.md`,
     mimeType: 'text/markdown',
     description: 'Utility features including Ping, Cancellation, and Progress Reporting from the Model Context Protocol specification.'
   },
   {
     name: 'MCP Specification - Server Features',
-    uri: 'https://modelcontextprotocol.io/specification/2025-03-26/server/index.md',
+    uri: `https://modelcontextprotocol.io/specification/${VERSION}/server/index.md`,
     mimeType: 'text/markdown',
     description: 'Server features including Prompts, Resources, Tools, and Server Utilities from the Model Context Protocol specification.'
   },
   {
     name: 'MCP Specification - Client Features',
-    uri: 'https://modelcontextprotocol.io/specification/2025-03-26/client/index.md',
+    uri: `https://modelcontextprotocol.io/specification/${VERSION}/client/index.md`,
     mimeType: 'text/markdown',
     description: 'Client features including Roots and Sampling from the Model Context Protocol specification.'
   },
@@ -382,8 +384,12 @@ async function fetchFullContent(): Promise<string> {
 
 // Helper function to filter URLs by section
 export function filterUrlsBySection(links: string[], section: string): string[] {
-  // Skip empty links and "MCP" entries
-  const validLinks = links.filter(url => url && url !== 'MCP');
+  // Skip empty links and "MCP" entries, and filter to latest version
+  const validLinks = links.filter(url => 
+    url && 
+    url !== 'MCP' && 
+    (url.includes(`/${VERSION}/`) || !url.match(/\/20\d{2}-\d{2}-\d{2}\//))
+  );
 
   // Handle regex patterns
   if (section.startsWith('^')) {
@@ -493,28 +499,28 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   let resourceTitle = '';
   const mimeType = 'text/markdown';
   
-  if (uri === 'https://modelcontextprotocol.io/specification/2025-03-26/architecture/index.md') {
+  if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/architecture/index.md`) {
     // Get all architecture-related links
     const links = await fetchLinksList();
     urls = filterUrlsBySection(links, '/architecture/');
     resourceTitle = 'MCP Specification - Architecture';
-  } else if (uri === 'https://modelcontextprotocol.io/specification/2025-03-26/basic/index.md') {
+  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/basic/index.md`) {
     const links = await fetchLinksList();
     urls = filterUrlsBySection(links, '/basic/');
     resourceTitle = 'MCP Specification - Base Protocol';
-  } else if (uri === 'https://modelcontextprotocol.io/specification/2025-03-26/basic/utilities/index.md') {
+  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/basic/utilities/index.md`) {
     const links = await fetchLinksList();
     urls = filterUrlsBySection(links, '/basic/utilities/');
     resourceTitle = 'MCP Specification - Utilities';
-  } else if (uri === 'https://modelcontextprotocol.io/specification/2025-03-26/server/index.md') {
+  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/server/index.md`) {
     const links = await fetchLinksList();
     urls = filterUrlsBySection(links, '/server/');
     resourceTitle = 'MCP Specification - Server Features';
-  } else if (uri === 'https://modelcontextprotocol.io/specification/2025-03-26/client/index.md') {
+  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/client/index.md`) {
     const links = await fetchLinksList();
     urls = filterUrlsBySection(links, '/client/');
     resourceTitle = 'MCP Specification - Client Features';
-  } else if (uri === 'https://modelcontextprotocol.io/specification/2025-03-26/index.md') {
+  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`) {
     // Return the complete specification including schema and all markdown content
     try {
       const completeDoc = await getCompleteResourceDoc();
@@ -554,7 +560,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const links = await fetchLinksList();
     urls = filterUrlsBySection(links, '/docs/');
     resourceTitle = 'MCP General Documentation';
-  } else if (uri === 'https://modelcontextprotocol.io/specification/2025-03-26/schema.json') {
+  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/schema.json`) {
     // Return the schema as JSON
     try {
       const schema = await getSchema();

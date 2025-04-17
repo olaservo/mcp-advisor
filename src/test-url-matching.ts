@@ -1,4 +1,4 @@
-import { fetchLinksList } from './index.js';
+import { fetchLinksList, VERSION } from './index.js';
 
 async function testUrlMatching() {
   // Fetch all URLs from llms.txt
@@ -36,6 +36,11 @@ async function testUrlMatching() {
   allUrls.forEach(url => {
     if (url === 'MCP') return; // Skip "MCP" entries
     
+    // Skip URLs with older versions
+    if (url.match(/\/20\d{2}-\d{2}-\d{2}\//) && !url.includes(`/${VERSION}/`)) {
+      return;
+    }
+    
     let matched = false;
     for (const section of sections) {
       if (section.startsWith('^')) {
@@ -66,14 +71,36 @@ async function testUrlMatching() {
     }
   }
 
-  // Find unmatched URLs
-  const unmatchedUrls = allUrls.filter(url => url !== 'MCP' && !matchedUrls.has(url));
-  
+  // Find version-filtered URLs
+  const versionFilteredUrls = allUrls.filter(url => 
+    url !== 'MCP' && 
+    url.match(/\/20\d{2}-\d{2}-\d{2}\//) && 
+    !url.includes(`/${VERSION}/`)
+  );
+
+  // Find unmatched URLs (excluding version-filtered ones)
+  const unmatchedUrls = allUrls.filter(url => 
+    url !== 'MCP' && 
+    !matchedUrls.has(url) &&
+    !(url.match(/\/20\d{2}-\d{2}-\d{2}\//) && !url.includes(`/${VERSION}/`))
+  );
+
+  console.log('\nVersion-filtered URLs:');
+  if (versionFilteredUrls.length > 0) {
+    versionFilteredUrls.forEach(url => console.log(`  ${url}`));
+    console.log(`\nℹ️ Filtered ${versionFilteredUrls.length} older version URLs`);
+  } else {
+    console.log('  None - no older version URLs found');
+  }
+
   console.log('\nUnmatched URLs:');
   if (unmatchedUrls.length > 0) {
     unmatchedUrls.forEach(url => console.log(`  ${url}`));
     console.error(`\n❌ Found ${unmatchedUrls.length} unmatched URLs`);
     process.exit(1);
+  } else if (versionFilteredUrls.length > 0) {
+    console.log('  None - all non-versioned URLs are matched');
+    console.log(`✅ Test passed (${versionFilteredUrls.length} older version URLs were filtered)`);
   } else {
     console.log('  None - all URLs are matched! ✅');
   }
