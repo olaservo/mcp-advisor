@@ -94,6 +94,16 @@ npm run build
 npm start
 ```
 
+### Testing URL Filtering
+
+The server includes URL filtering to ensure only content matching the current version is included:
+
+```bash
+npm run test:urls
+```
+
+This verifies that the server correctly filters specification URLs based on the VERSION constant.  Note that "draft" is treated the same as any other version, which means it should be explicitly specified if you want to point to the "draft" version of the spec and documentation.
+
 ## Links
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/specification/2025-03-26/)
