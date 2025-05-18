@@ -1,9 +1,16 @@
 #!/usr/bin/env node
-// Default version to use when no specific version is requested
-export const VERSION = '2025-03-26';
-
 // List of supported versions
 export const SUPPORTED_VERSIONS = ['draft', '2024-11-05', '2025-03-26'];
+
+// Default version to use when no specific version is requested
+// Can be overridden with DEFAULT_SPEC_VERSION environment variable
+const DEFAULT_VERSION = '2025-03-26';
+export const VERSION = (() => {
+  const envVersion = process.env.DEFAULT_SPEC_VERSION;
+  return envVersion && SUPPORTED_VERSIONS.includes(envVersion) 
+    ? envVersion 
+    : DEFAULT_VERSION;
+})();
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';

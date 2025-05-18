@@ -38,8 +38,12 @@ npm install -g mcp-advisor
     "mcp-advisor": {
       "command": "npx",
       "args": [
+        "-y",
         "mcp-advisor@latest"
-      ]
+      ],
+      "env": {
+        "DEFAULT_SPEC_VERSION":"2025-03-26" // Optional - overrides the default version used for static Resources that correspond to a specific MCP version
+      }
     }
   }
 }
@@ -78,7 +82,12 @@ The server provides resource templates that allow accessing specification resour
 
 Supported versions: `draft`, `2024-11-05`, `2025-03-26` (default)
 
-**Note on Backward Compatibility**: Clients that only support Resources (and not Resource Templates) will still be able to access the regular Resources using the default version (`2025-03-26`). The server maintains full backward compatibility with existing clients.
+**Version Configuration**:
+- **Resource Templates**: Clients that support Resource Templates can specify the version in the URI template.
+- **Environment Variable**: Set the `DEFAULT_SPEC_VERSION` environment variable to change the default version (e.g., `DEFAULT_SPEC_VERSION=draft`).
+- **Default Version**: If neither of the above is specified, the server uses `2025-03-26` as the default version.
+
+**Note on Backward Compatibility**: Clients that only support Resources (and not Resource Templates) will still be able to access the regular Resources using the configured default version. The server maintains full backward compatibility with existing clients.
 
 **Additional Documentation**
 - **Getting Started** (`/quickstart`): Getting started guides for client developers, server developers, and users
