@@ -78,6 +78,8 @@ The server provides resource templates that allow accessing specification resour
 
 Supported versions: `draft`, `2024-11-05`, `2025-03-26` (default)
 
+**Note on Backward Compatibility**: Clients that only support Resources (and not Resource Templates) will still be able to access the regular Resources using the default version (`2025-03-26`). The server maintains full backward compatibility with existing clients.
+
 **Additional Documentation**
 - **Getting Started** (`/quickstart`): Getting started guides for client developers, server developers, and users
 - **Development** (`/development`): Development resources including contributing guidelines, roadmap, and updates
