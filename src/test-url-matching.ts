@@ -56,8 +56,8 @@ async function testUrlMatching() {
   allUrls.forEach(url => {
     if (url === 'MCP') return; // Skip "MCP" entries
     
-    // Skip URLs with different versions
-    if (url.match(/\/20\d{2}-\d{2}-\d{2}\//) && !url.includes(`/${VERSION}/`)) {
+    // Skip URLs with different versions (including draft when VERSION is not 'draft')
+    if ((url.match(/\/20\d{2}-\d{2}-\d{2}\/|\/draft\//) && !url.includes(`/${VERSION}/`))) {
       return;
     }
     
@@ -121,18 +121,17 @@ async function testUrlMatching() {
     }
   }
 
-  // Find version-filtered URLs
+  // Find version-filtered URLs (including draft URLs when VERSION is not 'draft')
   const versionFilteredUrls = allUrls.filter(url => 
     url !== 'MCP' && 
-    url.match(/\/20\d{2}-\d{2}-\d{2}\//) && 
-    !url.includes(`/${VERSION}/`)
+    (url.match(/\/20\d{2}-\d{2}-\d{2}\/|\/draft\//) && !url.includes(`/${VERSION}/`))
   );
 
   // Find unmatched URLs (excluding version-filtered ones)
   const unmatchedUrls = allUrls.filter(url => 
     url !== 'MCP' && 
     !matchedUrls.has(url) &&
-    !(url.match(/\/20\d{2}-\d{2}-\d{2}\//) && !url.includes(`/${VERSION}/`))
+    !(url.match(/\/20\d{2}-\d{2}-\d{2}\/|\/draft\//) && !url.includes(`/${VERSION}/`))
   );
 
   console.log('\n=== FILTERED URLS ===');
@@ -161,10 +160,13 @@ async function testUrlMatching() {
   const testDraftUrl = 'https://modelcontextprotocol.io/specification/draft/index.md';
   const testUrls = [...allUrls, testDraftUrl];
   
+  // Use type assertion to avoid TypeScript error about comparing non-overlapping types
+  const shouldIncludeDraft = (VERSION as string) === 'draft';
   for (const section of sections) {
     const filteredUrls = filterUrlsBySection(testUrls, section);
     const includesDraft = filteredUrls.includes(testDraftUrl);
-    console.log(`Section "${section}" ${includesDraft ? '✅ includes' : '❌ excludes'} draft URL`);
+    const isCorrect = includesDraft === shouldIncludeDraft;
+    console.log(`Section "${section}" ${includesDraft ? '✅ includes' : '❌ excludes'} draft URL - ${isCorrect ? '✓ correct' : '✗ incorrect'}`);
   }
 }
 

@@ -356,11 +356,11 @@ export async function fetchLinksList(): Promise<string[]> {
 
 // Helper function to filter URLs by section
 export function filterUrlsBySection(links: string[], section: string): string[] {
-  // Skip empty links and "MCP" entries, and filter to latest version
+  // Skip empty links and "MCP" entries, and filter to match current version only
   const validLinks = links.filter(url => 
     url && 
     url !== 'MCP' && 
-    (url.includes(`/${VERSION}/`) || !url.match(/\/20\d{2}-\d{2}-\d{2}\//))
+    (url.includes(`/${VERSION}/`) || !url.match(/\/20\d{2}-\d{2}-\d{2}\/|\/draft\//))
   );
 
   // Handle regex patterns
