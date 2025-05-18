@@ -99,7 +99,7 @@ npm start
 The server includes URL filtering to ensure only content matching the current version is included:
 
 ```bash
-npm run test:urls
+npm run test
 ```
 
 This verifies that the server correctly filters specification URLs based on the VERSION constant.  Note that "draft" is treated the same as any other version, which means it should be explicitly specified if you want to point to the "draft" version of the spec and documentation.

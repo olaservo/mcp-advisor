@@ -16,7 +16,7 @@
     "postbuild": "node -e \"const fs=require('fs'); if(process.platform !== 'win32') require('child_process').execSync('chmod +x dist/index.js')\"",
     "start": "node dist/index.js",
     "prepublishOnly": "npm run build",
-    "test:urls": "node --loader ts-node/esm src/test-url-matching.ts"
+    "test": "node --loader ts-node/esm src/test-url-matching.ts"
   },
   "repository": {
     "type": "git",
