@@ -1,5 +1,9 @@
 #!/usr/bin/env node
+// Default version to use when no specific version is requested
 export const VERSION = '2025-03-26';
+
+// List of supported versions
+export const SUPPORTED_VERSIONS = ['draft', '2024-11-05', '2025-03-26'];
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -8,6 +12,7 @@ import {
   GetPromptRequestSchema, 
   ListPromptsRequestSchema,
   ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
   CompleteRequestSchema,
   McpError,
@@ -87,10 +92,57 @@ async function getSchema(): Promise<any> {
   }
 }
 
+// Define resource templates with version parameter
+const resourceTemplates = [
+  {
+    name: "MCP Specification by Version",
+    uriTemplate: "https://modelcontextprotocol.io/specification/{version}/index.md",
+    description: "Access the MCP specification for any supported version",
+    mimeType: "text/markdown"
+  },
+  {
+    name: "MCP Specification Schema by Version",
+    uriTemplate: "https://modelcontextprotocol.io/specification/{version}/schema.json",
+    description: "Access the MCP specification JSON schema for any supported version",
+    mimeType: "application/json"
+  },
+  {
+    name: "MCP Specification Architecture by Version",
+    uriTemplate: "https://modelcontextprotocol.io/specification/{version}/architecture/index.md",
+    description: "Access the MCP architecture specification for any supported version",
+    mimeType: "text/markdown"
+  },
+  {
+    name: "MCP Specification Base Protocol by Version",
+    uriTemplate: "https://modelcontextprotocol.io/specification/{version}/basic/index.md",
+    description: "Access the MCP base protocol specification for any supported version",
+    mimeType: "text/markdown"
+  },
+  {
+    name: "MCP Specification Utilities by Version",
+    uriTemplate: "https://modelcontextprotocol.io/specification/{version}/basic/utilities/index.md",
+    description: "Access the MCP utilities specification for any supported version",
+    mimeType: "text/markdown"
+  },
+  {
+    name: "MCP Specification Server Features by Version",
+    uriTemplate: "https://modelcontextprotocol.io/specification/{version}/server/index.md",
+    description: "Access the MCP server features specification for any supported version",
+    mimeType: "text/markdown"
+  },
+  {
+    name: "MCP Specification Client Features by Version",
+    uriTemplate: "https://modelcontextprotocol.io/specification/{version}/client/index.md",
+    description: "Access the MCP client features specification for any supported version",
+    mimeType: "text/markdown"
+  }
+];
+
 const serverCapabilities: ServerCapabilities = {
   prompts: {},
   resources: {},
-  completions: {}
+  completions: {},
+  resourceTemplates: {} // Add resource templates capability
 };
 
 const server = new Server(
@@ -208,26 +260,49 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   );
 });
 
+// Add handler for listing resource templates
+server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+  return {
+    resourceTemplates: resourceTemplates
+  };
+});
+
 server.setRequestHandler(CompleteRequestSchema, async (request) => {
-    const { ref, argument } = request.params;
-    if (ref.type === "ref/prompt") {
-      // Filter topics that start with the input value if provided
-      const values = argument?.value 
-        ? TOPIC_COMPLETIONS.filter(topic => topic.toLowerCase().startsWith(argument.value.toLowerCase()))
-        : TOPIC_COMPLETIONS;
-      return { 
-        completion: { 
-          values,
-          hasMore: false, 
-          total: values.length 
-        } 
-      };
-    }
-    throw new McpError(
-      ErrorCode.InvalidParams,
-      `Unknown reference type passed in completion request`
-    );
-  });
+  const { ref, argument } = request.params;
+  
+  if (ref.type === "ref/prompt") {
+    // Filter topics that start with the input value if provided
+    const values = argument?.value 
+      ? TOPIC_COMPLETIONS.filter(topic => topic.toLowerCase().startsWith(argument.value.toLowerCase()))
+      : TOPIC_COMPLETIONS;
+    return { 
+      completion: { 
+        values,
+        hasMore: false, 
+        total: values.length 
+      } 
+    };
+  } 
+  else if (ref.type === "ref/resource" && argument?.name === "version") {
+    // Filter versions that start with the input value if provided
+    const values = argument?.value 
+      ? SUPPORTED_VERSIONS.filter(v => v.startsWith(argument.value))
+      : SUPPORTED_VERSIONS;
+    
+    return { 
+      completion: { 
+        values,
+        hasMore: false, 
+        total: values.length 
+      } 
+    };
+  }
+  
+  throw new McpError(
+    ErrorCode.InvalidParams,
+    `Unknown reference type or argument in completion request`
+  );
+});
 
 server.onerror = (error) => {
   console.error('[MCP Error]', error);
@@ -354,13 +429,13 @@ export async function fetchLinksList(): Promise<string[]> {
   }
 }
 
-// Helper function to filter URLs by section
-export function filterUrlsBySection(links: string[], section: string): string[] {
-  // Skip empty links and "MCP" entries, and filter to match current version only
+// Helper function to filter URLs by section and version
+export function filterUrlsBySection(links: string[], section: string, version: string = VERSION): string[] {
+  // Skip empty links and "MCP" entries, and filter to match specified version only
   const validLinks = links.filter(url => 
     url && 
     url !== 'MCP' && 
-    (url.includes(`/${VERSION}/`) || !url.match(/\/20\d{2}-\d{2}-\d{2}\/|\/draft\//))
+    (url.includes(`/${version}/`) || !url.match(/\/20\d{2}-\d{2}-\d{2}\/|\/draft\//))
   );
 
   // Handle regex patterns
@@ -560,36 +635,100 @@ async function getCombinedCompleteResourceDoc(): Promise<string> {
   }
 }
 
+// Helper function to extract version from URI
+function extractVersionFromUri(uri: string): string {
+  // Default to global version
+  let version = VERSION;
+  
+  // Check for version in URI
+  const versionMatch = uri.match(/\/specification\/([^/]+)\//);
+  if (versionMatch && versionMatch[1]) {
+    // Validate that the version is supported
+    if (SUPPORTED_VERSIONS.includes(versionMatch[1])) {
+      version = versionMatch[1];
+    } else {
+      console.error(`Unsupported version requested: ${versionMatch[1]}, using default: ${VERSION}`);
+    }
+  }
+  
+  return version;
+}
+
+// Helper function to get schema URL for a specific version
+function getSchemaUrlForVersion(version: string): string {
+  return `https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/${version}/schema.json`;
+}
+
+// Modified getSchema function to accept a version parameter
+async function getSchemaForVersion(version: string): Promise<any> {
+  const schemaUrl = getSchemaUrlForVersion(version);
+  const cached = Cache.get<any>(schemaUrl);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(schemaUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    const schema = await response.json();
+    Cache.set(schemaUrl, schema);
+    return schema;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`Failed to fetch schema for version ${version}:`, errorMessage);
+    
+    // If we have a cached version, return it even if expired
+    const expired = Cache.getExpired<any>(schemaUrl);
+    if (expired) {
+      console.error('Using expired cache as fallback');
+      return expired;
+    }
+    
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to fetch schema for version ${version}: ${errorMessage}`
+    );
+  }
+}
+
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const uri = request.params.uri;
+  
+  // Extract version from URI
+  const version = extractVersionFromUri(uri);
   
   // Determine which resource is being requested and select the appropriate URLs
   let urls: string[] = [];
   let resourceTitle = '';
   const mimeType = 'text/markdown';
   
-  if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/architecture/index.md`) {
+  if (uri.match(/\/specification\/[^/]+\/architecture\/index\.md$/)) {
     // Get all architecture-related links
     const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/architecture/');
+    urls = filterUrlsBySection(links, '/architecture/', version);
     resourceTitle = 'MCP Specification - Architecture';
-  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/basic/index.md`) {
+  } else if (uri.match(/\/specification\/[^/]+\/basic\/index\.md$/)) {
     const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/basic/');
+    urls = filterUrlsBySection(links, '/basic/', version);
     resourceTitle = 'MCP Specification - Base Protocol';
-  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/basic/utilities/index.md`) {
+  } else if (uri.match(/\/specification\/[^/]+\/basic\/utilities\/index\.md$/)) {
     const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/basic/utilities/');
+    urls = filterUrlsBySection(links, '/basic/utilities/', version);
     resourceTitle = 'MCP Specification - Utilities';
-  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/server/index.md`) {
+  } else if (uri.match(/\/specification\/[^/]+\/server\/index\.md$/)) {
     const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/server/');
+    urls = filterUrlsBySection(links, '/server/', version);
     resourceTitle = 'MCP Specification - Server Features';
-  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/client/index.md`) {
+  } else if (uri.match(/\/specification\/[^/]+\/client\/index\.md$/)) {
     const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/client/');
+    urls = filterUrlsBySection(links, '/client/', version);
     resourceTitle = 'MCP Specification - Client Features';
-  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`) {
+  } else if (uri.match(/\/specification\/[^/]+\/index\.md$/)) {
     // Return the complete specification using multiple contents pattern
     try {
       const contentItems = await getCompleteResourceDoc(uri);
@@ -623,10 +762,10 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const links = await fetchLinksList();
     urls = filterUrlsBySection(links, '/docs/');
     resourceTitle = 'MCP General Documentation';
-  } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/schema.json`) {
+  } else if (uri.match(/\/specification\/[^/]+\/schema\.json$/)) {
     // Return the schema as JSON
     try {
-      const schema = await getSchema();
+      const schema = await getSchemaForVersion(version);
       return {
         contents: [
           {
