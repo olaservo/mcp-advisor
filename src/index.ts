@@ -142,7 +142,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     }
     
     const completeSpecResource = resources.find(r => r.uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`);
-    const completeDoc = await getCompleteResourceDoc();
+    const completeDoc = await getCombinedCompleteResourceDoc();
     return {
       description: 'Model Context Protocol (MCP) specification compliance evaluation for server repository',
       messages: [
@@ -176,7 +176,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     }
     
     const completeSpecResource = resources.find(r => r.uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`);
-    const completeDoc = await getCompleteResourceDoc();
+    const completeDoc = await getCombinedCompleteResourceDoc();
     return {
       description: 'Comprehensive explanation of Model Context Protocol (MCP) topic with full documentation',
       messages: [
@@ -436,7 +436,14 @@ async function fetchMarkdownContent(url: string): Promise<string> {
   }
 }
 
-async function getCompleteResourceDoc() {
+// Define a type for content items
+interface ContentItem {
+  uri: string;
+  text: string;
+  mimeType: string;
+}
+
+async function getCompleteResourceDoc(baseUri: string): Promise<ContentItem[]> {
   try {
     // Get the schema first
     const schema = await getSchema();
@@ -448,11 +455,73 @@ async function getCompleteResourceDoc() {
       !url.includes('schema.json')  // Exclude schema.json as we handle it separately
     );
     
-    // Build the complete document
-    let completeDoc = '# Model Context Protocol Complete Specification\n\n';
+    // Create array to hold multiple contents
+    const contents: ContentItem[] = [];
     
-    // Add schema section
-    completeDoc += '## JSON Schema\n\n```json\n' + JSON.stringify(schema, null, 2) + '\n```\n\n';
+    // Add the schema as the first content
+    contents.push({
+      uri: `${baseUri}#schema`,
+      text: JSON.stringify(schema, null, 2),
+      mimeType: 'application/json'
+    });
+    
+    // Define the order of sections
+    const sections = [
+      'architecture',
+      'basic',
+      'basic/utilities',
+      'client',
+      'server',
+      'server/utilities'
+    ];
+    
+    // Fetch and combine content for each section
+    for (const section of sections) {
+      const sectionLinks = filterUrlsBySection(specLinks, `/${section}/`);
+      
+      // Skip empty sections
+      if (sectionLinks.length === 0) continue;
+      
+      // Fetch content from all URLs in this section
+      const contentPromises = sectionLinks.map(url => fetchMarkdownContent(url));
+      const sectionContents = await Promise.all(contentPromises);
+      
+      // Add section content
+      const sectionTitle = section.split('/').pop() || section;
+      let sectionDoc = `# ${sectionTitle.charAt(0).toUpperCase() + sectionTitle.slice(1)}\n\n`;
+      sectionDoc += sectionContents.join('\n\n');
+      
+      // Add as a separate content item
+      contents.push({
+        uri: `${baseUri}#${section}`,
+        text: sectionDoc,
+        mimeType: 'text/markdown'
+      });
+    }
+    
+    return contents;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Could not generate complete specification: ${errorMessage}`
+    );
+  }
+}
+
+// Helper function to combine all content items into a single document
+// This is used for backward compatibility with the prompts
+async function getCombinedCompleteResourceDoc(): Promise<string> {
+  try {
+    // Get all links and filter for specification URLs matching our version
+    const allLinks = await fetchLinksList();
+    const specLinks = allLinks.filter(url => 
+      url.includes(`/specification/${VERSION}/`) && 
+      !url.includes('schema.json')  // Exclude schema.json as we handle it separately
+    );
+    
+    // Build the complete document
+    let completeDoc = '# Model Context Protocol Documentation\n\n';
     
     // Define the order of sections
     const sections = [
@@ -521,17 +590,11 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     urls = filterUrlsBySection(links, '/client/');
     resourceTitle = 'MCP Specification - Client Features';
   } else if (uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`) {
-    // Return the complete specification including schema and all markdown content
+    // Return the complete specification using multiple contents pattern
     try {
-      const completeDoc = await getCompleteResourceDoc();
+      const contentItems = await getCompleteResourceDoc(uri);
       return {
-        contents: [
-          {
-            uri: uri,
-            text: completeDoc,
-            mimeType: 'text/markdown'
-          }
-        ]
+        contents: contentItems
       };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
