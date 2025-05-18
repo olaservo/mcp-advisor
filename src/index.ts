@@ -636,7 +636,7 @@ async function getCombinedCompleteResourceDoc(): Promise<string> {
 }
 
 // Helper function to extract version from URI
-function extractVersionFromUri(uri: string): string {
+export function extractVersionFromUri(uri: string): string {
   // Default to global version
   let version = VERSION;
   
