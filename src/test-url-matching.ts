@@ -1,4 +1,4 @@
-import { fetchLinksList, VERSION } from './index.js';
+import { fetchLinksList, VERSION, filterUrlsBySection } from './index.js';
 
 async function testUrlMatching() {
   // Fetch all URLs from llms.txt
@@ -31,12 +31,32 @@ async function testUrlMatching() {
   // Group URLs by section
   const urlsBySection = new Map<string, string[]>();
   const matchedUrls = new Set<string>();
+  const draftUrls = new Set<string>();
+  const versionedUrls = new Set<string>();
+  const otherUrls = new Set<string>();
 
-  // First pass: group URLs by section
+  // First pass: identify URL types
   allUrls.forEach(url => {
     if (url === 'MCP') return; // Skip "MCP" entries
     
-    // Skip URLs with older versions
+    // Identify draft URLs
+    if (url.includes('/draft/')) {
+      draftUrls.add(url);
+    }
+    
+    // Identify versioned URLs
+    if (url.match(/\/20\d{2}-\d{2}-\d{2}\//)) {
+      versionedUrls.add(url);
+    } else if (url !== 'MCP' && !url.includes('/draft/')) {
+      otherUrls.add(url);
+    }
+  });
+
+  // Second pass: group URLs by section
+  allUrls.forEach(url => {
+    if (url === 'MCP') return; // Skip "MCP" entries
+    
+    // Skip URLs with different versions
     if (url.match(/\/20\d{2}-\d{2}-\d{2}\//) && !url.includes(`/${VERSION}/`)) {
       return;
     }
@@ -62,12 +82,42 @@ async function testUrlMatching() {
     }
   });
 
+  // Display URL type statistics
+  console.log('\n=== URL TYPE STATISTICS ===');
+  console.log(`Total URLs: ${allUrls.length}`);
+  console.log(`Draft URLs: ${draftUrls.size}`);
+  console.log(`Versioned URLs: ${versionedUrls.size}`);
+  console.log(`Other URLs: ${otherUrls.size}`);
+  
+  // Display draft URLs specifically
+  console.log('\n=== DRAFT URLS ===');
+  if (draftUrls.size > 0) {
+    const includedDraftUrls = [...draftUrls].filter(url => matchedUrls.has(url));
+    const excludedDraftUrls = [...draftUrls].filter(url => !matchedUrls.has(url));
+    
+    console.log(`Included draft URLs: ${includedDraftUrls.length}`);
+    includedDraftUrls.forEach(url => console.log(`  ✅ ${url}`));
+    
+    console.log(`\nExcluded draft URLs: ${excludedDraftUrls.length}`);
+    excludedDraftUrls.forEach(url => console.log(`  ❌ ${url}`));
+    
+    if (excludedDraftUrls.length > 0) {
+      console.log('\n⚠️ Note: Draft URLs are being excluded by the current filtering logic');
+    }
+  } else {
+    console.log('  None found');
+  }
+
   // Display results by section
+  console.log('\n=== URLS BY SECTION ===');
   for (const section of sections) {
     const urls = urlsBySection.get(section) || [];
     if (urls.length > 0) {
       console.log(`\n${section}:`);
-      urls.forEach(url => console.log(`  ${url}`));
+      urls.forEach(url => console.log(`  ✅ ${url}`));
+    } else {
+      console.log(`\n${section}:`);
+      console.log('  No matching URLs');
     }
   }
 
@@ -85,24 +135,36 @@ async function testUrlMatching() {
     !(url.match(/\/20\d{2}-\d{2}-\d{2}\//) && !url.includes(`/${VERSION}/`))
   );
 
+  console.log('\n=== FILTERED URLS ===');
   console.log('\nVersion-filtered URLs:');
   if (versionFilteredUrls.length > 0) {
-    versionFilteredUrls.forEach(url => console.log(`  ${url}`));
-    console.log(`\nℹ️ Filtered ${versionFilteredUrls.length} older version URLs`);
+    versionFilteredUrls.forEach(url => console.log(`  ❌ ${url}`));
+    console.log(`\nℹ️ Filtered ${versionFilteredUrls.length} different version URLs`);
   } else {
-    console.log('  None - no older version URLs found');
+    console.log('  None - no different version URLs found');
   }
 
-  console.log('\nUnmatched URLs:');
+  console.log('\nOther unmatched URLs:');
   if (unmatchedUrls.length > 0) {
-    unmatchedUrls.forEach(url => console.log(`  ${url}`));
+    unmatchedUrls.forEach(url => console.log(`  ❌ ${url}`));
     console.error(`\n❌ Found ${unmatchedUrls.length} unmatched URLs`);
     process.exit(1);
   } else if (versionFilteredUrls.length > 0) {
     console.log('  None - all non-versioned URLs are matched');
-    console.log(`✅ Test passed (${versionFilteredUrls.length} older version URLs were filtered)`);
+    console.log(`✅ Test passed (${versionFilteredUrls.length} different version URLs were filtered)`);
   } else {
     console.log('  None - all URLs are matched! ✅');
+  }
+  
+  // Test filterUrlsBySection function directly with a draft URL
+  console.log('\n=== TESTING filterUrlsBySection WITH DRAFT URL ===');
+  const testDraftUrl = 'https://modelcontextprotocol.io/specification/draft/index.md';
+  const testUrls = [...allUrls, testDraftUrl];
+  
+  for (const section of sections) {
+    const filteredUrls = filterUrlsBySection(testUrls, section);
+    const includesDraft = filteredUrls.includes(testDraftUrl);
+    console.log(`Section "${section}" ${includesDraft ? '✅ includes' : '❌ excludes'} draft URL`);
   }
 }
 
