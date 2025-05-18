@@ -1,4 +1,4 @@
-import { fetchLinksList, VERSION, filterUrlsBySection } from './index.js';
+import { fetchLinksList, VERSION, SUPPORTED_VERSIONS, filterUrlsBySection, extractVersionFromUri } from './index.js';
 
 async function testUrlMatching() {
   // Fetch all URLs from llms.txt
@@ -167,6 +167,46 @@ async function testUrlMatching() {
     const includesDraft = filteredUrls.includes(testDraftUrl);
     const isCorrect = includesDraft === shouldIncludeDraft;
     console.log(`Section "${section}" ${includesDraft ? '✅ includes' : '❌ excludes'} draft URL - ${isCorrect ? '✓ correct' : '✗ incorrect'}`);
+  }
+  
+  // Test with each supported version
+  console.log('\n=== TESTING WITH MULTIPLE VERSIONS ===');
+  for (const testVersion of SUPPORTED_VERSIONS) {
+    console.log(`\nTesting with version: ${testVersion}`);
+    
+    // Test filterUrlsBySection with specific version
+    const filteredUrls = filterUrlsBySection(allUrls, '/architecture/', testVersion);
+    console.log(`Found ${filteredUrls.length} URLs for /architecture/ with version ${testVersion}`);
+    filteredUrls.forEach(url => console.log(`  ✅ ${url}`));
+  }
+  
+  // Test version extraction from URIs
+  console.log('\n=== TESTING VERSION EXTRACTION ===');
+  const testUris = [
+    'https://modelcontextprotocol.io/specification/draft/index.md',
+    'https://modelcontextprotocol.io/specification/2024-11-05/index.md',
+    'https://modelcontextprotocol.io/specification/2025-03-26/index.md',
+    'https://modelcontextprotocol.io/specification/invalid-version/index.md',
+    'https://modelcontextprotocol.io/docs/index.md'
+  ];
+  
+  for (const uri of testUris) {
+    const extractedVersion = extractVersionFromUri(uri);
+    console.log(`URI: ${uri} -> Extracted version: ${extractedVersion}`);
+  }
+  
+  // Test resource template URIs
+  console.log('\n=== TESTING RESOURCE TEMPLATE URIS ===');
+  const templateUris = [
+    'https://modelcontextprotocol.io/specification/{version}/index.md',
+    'https://modelcontextprotocol.io/specification/{version}/schema.json'
+  ];
+  
+  for (const templateUri of templateUris) {
+    for (const version of SUPPORTED_VERSIONS) {
+      const resolvedUri = templateUri.replace('{version}', version);
+      console.log(`Template: ${templateUri} with version ${version} -> ${resolvedUri}`);
+    }
   }
 }
 

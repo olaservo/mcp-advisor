@@ -38,8 +38,12 @@ npm install -g mcp-advisor
     "mcp-advisor": {
       "command": "npx",
       "args": [
+        "-y",
         "mcp-advisor@latest"
-      ]
+      ],
+      "env": {
+        "DEFAULT_SPEC_VERSION":"2025-03-26" // Optional - overrides the default version used for static Resources that correspond to a specific MCP version
+      }
     }
   }
 }
@@ -57,13 +61,33 @@ npm install -g mcp-advisor
 The server provides access to different sections of the MCP specification and documentation:
 
 **Specification Resources**
-- **Complete Specification** (`/specification/complete`): The complete Model Context Protocol specification including schema, architecture, base protocol, utilities, server features, and client features
-- **Schema Specification** (`/specification/schema`): The complete Model Context Protocol JSON schema specification (2025-03-26)
-- **Architecture Overview** (`/specification/basic/architecture`): Overview of the Model Context Protocol architecture
-- **Base Protocol** (`/specification/basic`): Core protocol details including transports, authorization, and lifecycle
-- **Utilities** (`/specification/utilities`): Documentation for Ping, Cancellation, and Progress Reporting features
-- **Server Features** (`/specification/server`): Comprehensive guide to Prompts, Resources, Tools, and Server Utilities including completion, logging, and pagination
-- **Client Features** (`/specification/client`): Information about Roots and Sampling capabilities
+- **Complete Specification**: The complete Model Context Protocol specification including schema, architecture, base protocol, utilities, server features, and client features
+- **Schema Specification**: The complete Model Context Protocol JSON schema specification
+- **Architecture Overview**: Overview of the Model Context Protocol architecture
+- **Base Protocol**: Core protocol details including transports, authorization, and lifecycle
+- **Utilities**: Documentation for Ping, Cancellation, and Progress Reporting features
+- **Server Features**: Comprehensive guide to Prompts, Resources, Tools, and Server Utilities including completion, logging, and pagination
+- **Client Features**: Information about Roots and Sampling capabilities
+
+All specification resources can be accessed with a specific version parameter.
+
+#### Resource Templates
+
+The server provides resource templates that allow accessing specification resources for different versions:
+
+- `https://modelcontextprotocol.io/specification/{version}/index.md`: Access the complete specification for any supported version
+- `https://modelcontextprotocol.io/specification/{version}/schema.json`: Access the JSON schema for any supported version
+- `https://modelcontextprotocol.io/specification/{version}/architecture/index.md`: Access the architecture specification for any supported version
+- And more...
+
+Supported versions: `draft`, `2024-11-05`, `2025-03-26` (default)
+
+**Version Configuration**:
+- **Resource Templates**: Clients that support Resource Templates can specify the version in the URI template.
+- **Environment Variable**: Set the `DEFAULT_SPEC_VERSION` environment variable to change the default version (e.g., `DEFAULT_SPEC_VERSION=draft`).
+- **Default Version**: If neither of the above is specified, the server uses `2025-03-26` as the default version.
+
+**Note on Backward Compatibility**: Clients that only support Resources (and not Resource Templates) will still be able to access the regular Resources using the configured default version. The server maintains full backward compatibility with existing clients.
 
 **Additional Documentation**
 - **Getting Started** (`/quickstart`): Getting started guides for client developers, server developers, and users
@@ -94,16 +118,16 @@ npm run build
 npm start
 ```
 
-### Testing URL Filtering
+### Testing URL Filtering and Version Support
 
-The server includes URL filtering to ensure only content matching the current version is included:
+The server includes URL filtering to ensure content matching the requested version is included:
 
 ```bash
-npm run test:urls
+npm run test
 ```
 
-This verifies that the server correctly filters specification URLs based on the VERSION constant.  Note that "draft" is treated the same as any other version, which means it should be explicitly specified if you want to point to the "draft" version of the spec and documentation.
+This verifies that the server correctly filters specification URLs based on the requested version. The server supports multiple versions including `draft`, `2024-11-05`, and `2025-03-26`, with `2025-03-26` being the default if no version is specified.
 
 ## Links
 
-- [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/specification/2025-03-26/)
+- [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/specification/) (supports multiple versions)
