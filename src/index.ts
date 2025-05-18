@@ -59,7 +59,7 @@ class Cache {
 const SCHEMA_URL = `https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/${VERSION}/schema.json`;
 
 // Suggested topics
-const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'why not just use http?', 'why does this protocol need to exist?'];
+const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'authorization', 'why not just use http?', 'why does this protocol need to exist?'];
 // Include all prompt names here
 const EXPLAIN_PROMPT = 'explain';
 const EVALUATE_SERVER_PROMPT = 'evaluate_server_compliance';
@@ -191,6 +191,11 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
 
+  // Draft version notice text
+  const draftNotice = VERSION === 'draft' ? 
+    "Note that the `draft` version you have selected represents the most up-to-date working version that is still evolving and subject to changes. The `draft` version is where active development happens and would contain the most current thinking and proposals before they're finalized into a dated release.\n\n" : 
+    "";
+
   if (promptName === EVALUATE_SERVER_PROMPT) {
     const path = request.params.arguments?.path;
     if (!path) {
@@ -209,7 +214,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
           role: 'user',
           content: {
             type: 'text',
-            text: `Please evaluate the MCP server implementation at path: ${path} for compliance with the full specification provided below.  Pay special attention to the MUST statements in the spec and non-optional features before moving on to SHOULD statements and/or optional enhancements.`
+            text: `${draftNotice}Please evaluate the MCP server implementation at path: ${path} for compliance with the full specification provided below.  Pay special attention to the MUST statements in the spec and non-optional features before moving on to SHOULD statements and/or optional enhancements.`
           }
         },
         {
@@ -243,7 +248,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
           role: 'user',
           content: {
             type: 'text',
-            text: `Please explain ${topic} as it relates to the Model Context Protocol. Include detailed information and examples where possible. You MUST always cite your references when you explain topics or answer questions based on the documentation provided below, and you MUST render a clickable link to the source when applicable.  You MAY ask the user to provide additional references to documentation or resources if you do not already have access to them.`
+            text: `${draftNotice}Please explain ${topic} as it relates to the Model Context Protocol. Include detailed information and examples where possible. You MUST always cite your references when you explain topics or answer questions based on the documentation provided below, and you MUST render a clickable link to the source when applicable.  You MAY ask the user to provide additional references to documentation or resources if you do not already have access to them.`
           }
         },
         {
