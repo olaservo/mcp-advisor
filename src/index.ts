@@ -169,6 +169,11 @@ const prompts = [
         name: 'topic',
         description: 'Which MCP topic would you like explained in detail? Feel free to phrase as a question.',
         required: true
+      },
+      {
+        name: 'version',
+        description: `Which MCP specification version to use. Supported versions: ${SUPPORTED_VERSIONS.join(', ')}. If not specified, the default version will be used.`,
+        required: false
       }
     ]
   },
@@ -180,6 +185,11 @@ const prompts = [
         name: 'path',
         description: 'Path to the MCP server repository to evaluate.',
         required: true
+      },
+      {
+        name: 'version',
+        description: `Which MCP specification version to use. Supported versions: ${SUPPORTED_VERSIONS.join(', ')}. If not specified, the default version will be used.`,
+        required: false
       }
     ]
   }
@@ -193,9 +203,22 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
+  
+  // Extract version from request arguments if provided, otherwise use default
+  let promptVersion = VERSION;
+  if (request.params.arguments?.version) {
+    const requestedVersion = request.params.arguments.version;
+    if (!SUPPORTED_VERSIONS.includes(requestedVersion)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Unsupported version: '${requestedVersion}'. Supported versions are: ${SUPPORTED_VERSIONS.join(', ')}`
+      );
+    }
+    promptVersion = requestedVersion;
+  }
 
   // Draft version notice text
-  const draftNotice = VERSION === 'draft' ? 
+  const draftNotice = promptVersion === 'draft' ? 
     "Note that the `draft` version you have selected represents the most up-to-date working version that is still evolving and subject to changes. The `draft` version is where active development happens and would contain the most current thinking and proposals before they're finalized into a dated release.\n\n" : 
     "";
 
@@ -208,8 +231,10 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       );
     }
     
-    const completeSpecResource = resources.find(r => r.uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`);
-    const completeDoc = await getCombinedCompleteResourceDoc();
+    // Get resource info from template
+    const specResource = getResourceFromTemplate("MCP Specification by Version", promptVersion);
+    const completeDoc = await getCombinedCompleteResourceDoc(promptVersion);
+    
     return {
       description: 'Model Context Protocol (MCP) specification compliance evaluation for server repository',
       messages: [
@@ -225,8 +250,8 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
           content: {
             type: 'resource',
             resource: {
-              uri: completeSpecResource?.uri,
-              mimeType: completeSpecResource?.mimeType,
+              uri: specResource.uri,
+              mimeType: specResource.mimeType,
               text: completeDoc
             }
           }
@@ -242,8 +267,10 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       );
     }
     
-    const completeSpecResource = resources.find(r => r.uri === `https://modelcontextprotocol.io/specification/${VERSION}/index.md`);
-    const completeDoc = await getCombinedCompleteResourceDoc();
+    // Get resource info from template
+    const specResource = getResourceFromTemplate("MCP Specification by Version", promptVersion);
+    const completeDoc = await getCombinedCompleteResourceDoc(promptVersion);
+    
     return {
       description: 'Comprehensive explanation of Model Context Protocol (MCP) topic with full documentation',
       messages: [
@@ -259,8 +286,8 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
           content: {
             type: 'resource',
             resource: {
-              uri:completeSpecResource?.uri,
-              mimeType:completeSpecResource?.mimeType,
+              uri: specResource.uri,
+              mimeType: specResource.mimeType,
               text: completeDoc
             }
           }
@@ -285,7 +312,7 @@ server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
 server.setRequestHandler(CompleteRequestSchema, async (request) => {
   const { ref, argument } = request.params;
   
-  if (ref.type === "ref/prompt") {
+  if (ref.type === "ref/prompt" && argument?.name === "topic") {
     // Filter topics that start with the input value if provided
     const values = argument?.value 
       ? TOPIC_COMPLETIONS.filter(topic => topic.toLowerCase().startsWith(argument.value.toLowerCase()))
@@ -298,7 +325,7 @@ server.setRequestHandler(CompleteRequestSchema, async (request) => {
       } 
     };
   } 
-  else if (ref.type === "ref/resource" && argument?.name === "version") {
+  else if ((ref.type === "ref/resource" || ref.type === "ref/prompt") && argument?.name === "version") {
     // Filter versions that start with the input value if provided
     const values = argument?.value 
       ? SUPPORTED_VERSIONS.filter(v => v.startsWith(argument.value))
@@ -533,15 +560,15 @@ interface ContentItem {
   mimeType: string;
 }
 
-async function getCompleteResourceDoc(baseUri: string): Promise<ContentItem[]> {
+async function getCompleteResourceDoc(baseUri: string, version: string = VERSION): Promise<ContentItem[]> {
   try {
-    // Get the schema first
-    const schema = await getSchema();
+    // Get the schema first for the specified version
+    const schema = await getSchemaForVersion(version);
     
-    // Get all links and filter for specification URLs matching our version
+    // Get all links and filter for specification URLs matching the specified version
     const allLinks = await fetchLinksList();
     const specLinks = allLinks.filter(url => 
-      url.includes(`/specification/${VERSION}/`) && 
+      url.includes(`/specification/${version}/`) && 
       !url.includes('schema.json')  // Exclude schema.json as we handle it separately
     );
     
@@ -601,12 +628,12 @@ async function getCompleteResourceDoc(baseUri: string): Promise<ContentItem[]> {
 
 // Helper function to combine all content items into a single document
 // This is used for backward compatibility with the prompts
-async function getCombinedCompleteResourceDoc(): Promise<string> {
+async function getCombinedCompleteResourceDoc(version: string = VERSION): Promise<string> {
   try {
-    // Get all links and filter for specification URLs matching our version
+    // Get all links and filter for specification URLs matching the specified version
     const allLinks = await fetchLinksList();
     const specLinks = allLinks.filter(url => 
-      url.includes(`/specification/${VERSION}/`) && 
+      url.includes(`/specification/${version}/`) && 
       !url.includes('schema.json')  // Exclude schema.json as we handle it separately
     );
     
@@ -671,6 +698,17 @@ export function extractVersionFromUri(uri: string): string {
   }
   
   return version;
+}
+
+// Helper function to get a resource from a template with a specific version
+function getResourceFromTemplate(templateName: string, version: string): { uri: string, mimeType: string } {
+  const template = resourceTemplates.find(t => t.name === templateName);
+  if (!template) {
+    throw new Error(`Template not found: ${templateName}`);
+  }
+  
+  const uri = template.uriTemplate.replace('{version}', version);
+  return { uri, mimeType: template.mimeType };
 }
 
 // Helper function to get schema URL for a specific version
@@ -759,7 +797,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   } else if (uri.match(/\/specification\/[^/]+\/index\.md$/)) {
     // Return the complete specification using multiple contents pattern
     try {
-      const contentItems = await getCompleteResourceDoc(uri);
+      const contentItems = await getCompleteResourceDoc(uri, version);
       return {
         contents: contentItems
       };
