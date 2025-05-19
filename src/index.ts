@@ -7,6 +7,9 @@ export const SUPPORTED_VERSIONS = ['draft', '2024-11-05', '2025-03-26'];
 const DEFAULT_VERSION = '2025-03-26';
 export const VERSION = (() => {
   const envVersion = process.env.DEFAULT_SPEC_VERSION;
+  if (envVersion && !SUPPORTED_VERSIONS.includes(envVersion)) {
+    console.error(`ERROR: Unsupported version '${envVersion}' specified in DEFAULT_SPEC_VERSION environment variable. Supported versions are: ${SUPPORTED_VERSIONS.join(', ')}. Falling back to default version: ${DEFAULT_VERSION}`);
+  }
   return envVersion && SUPPORTED_VERSIONS.includes(envVersion) 
     ? envVersion 
     : DEFAULT_VERSION;
@@ -659,7 +662,11 @@ export function extractVersionFromUri(uri: string): string {
     if (SUPPORTED_VERSIONS.includes(versionMatch[1])) {
       version = versionMatch[1];
     } else {
-      console.error(`Unsupported version requested: ${versionMatch[1]}, using default: ${VERSION}`);
+      console.error(`ERROR: Unsupported version '${versionMatch[1]}' requested in URI: ${uri}`);
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Unsupported version: '${versionMatch[1]}'. Supported versions are: ${SUPPORTED_VERSIONS.join(', ')}`
+      );
     }
   }
   
@@ -672,7 +679,16 @@ function getSchemaUrlForVersion(version: string): string {
 }
 
 // Modified getSchema function to accept a version parameter
-async function getSchemaForVersion(version: string): Promise<any> {
+export async function getSchemaForVersion(version: string): Promise<any> {
+  // Validate that the version is supported
+  if (!SUPPORTED_VERSIONS.includes(version)) {
+    console.error(`ERROR: Unsupported version '${version}' requested for schema`);
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `Unsupported version: '${version}'. Supported versions are: ${SUPPORTED_VERSIONS.join(', ')}`
+    );
+  }
+  
   const schemaUrl = getSchemaUrlForVersion(version);
   const cached = Cache.get<any>(schemaUrl);
   if (cached) {
