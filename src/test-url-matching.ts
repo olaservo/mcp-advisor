@@ -1,4 +1,5 @@
-import { fetchLinksList, VERSION, SUPPORTED_VERSIONS, filterUrlsBySection, extractVersionFromUri } from './index.js';
+import { fetchLinksList, VERSION, SUPPORTED_VERSIONS, filterUrlsBySection, extractVersionFromUri, getSchemaForVersion } from './index.js';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 async function testUrlMatching() {
   // Fetch all URLs from llms.txt
@@ -182,17 +183,124 @@ async function testUrlMatching() {
   
   // Test version extraction from URIs
   console.log('\n=== TESTING VERSION EXTRACTION ===');
-  const testUris = [
+  const validUris = [
     'https://modelcontextprotocol.io/specification/draft/index.md',
     'https://modelcontextprotocol.io/specification/2024-11-05/index.md',
     'https://modelcontextprotocol.io/specification/2025-03-26/index.md',
-    'https://modelcontextprotocol.io/specification/invalid-version/index.md',
-    'https://modelcontextprotocol.io/docs/index.md'
+    'https://modelcontextprotocol.io/docs/index.md' // No version in URI
   ];
   
-  for (const uri of testUris) {
-    const extractedVersion = extractVersionFromUri(uri);
-    console.log(`URI: ${uri} -> Extracted version: ${extractedVersion}`);
+  const invalidUris = [
+    'https://modelcontextprotocol.io/specification/invalid-version/index.md',
+    'https://modelcontextprotocol.io/specification/1.0.0/index.md',
+    'https://modelcontextprotocol.io/specification/2023-01-01/index.md' // Non-existent version
+  ];
+  
+  // Test valid URIs
+  console.log('\nTesting valid URIs:');
+  let validTestsPassed = true;
+  for (const uri of validUris) {
+    try {
+      const extractedVersion = extractVersionFromUri(uri);
+      console.log(`✅ URI: ${uri} -> Extracted version: ${extractedVersion}`);
+    } catch (error) {
+      console.error(`❌ ERROR: URI ${uri} should be valid but threw an error:`, error);
+      validTestsPassed = false;
+    }
+  }
+  
+  // Test invalid URIs
+  console.log('\nTesting invalid URIs:');
+  let invalidTestsPassed = true;
+  for (const uri of invalidUris) {
+    try {
+      const extractedVersion = extractVersionFromUri(uri);
+      console.error(`❌ ERROR: URI ${uri} should throw an error but returned: ${extractedVersion}`);
+      invalidTestsPassed = false;
+    } catch (error) {
+      if (error instanceof McpError) {
+        const isCorrectErrorCode = error.code === ErrorCode.InvalidParams;
+        const messageIncludesVersions = error.message.includes(SUPPORTED_VERSIONS.join(', '));
+        
+        if (isCorrectErrorCode && messageIncludesVersions) {
+          console.log(`✅ URI: ${uri} -> Correctly threw McpError with code ${error.code}`);
+          console.log(`   Message: ${error.message}`);
+        } else {
+          console.error(`❌ ERROR: URI ${uri} threw McpError but with wrong details:`);
+          console.error(`   Expected code ${ErrorCode.InvalidParams}, got ${error.code}`);
+          console.error(`   Message includes supported versions: ${messageIncludesVersions}`);
+          console.error(`   Message: ${error.message}`);
+          invalidTestsPassed = false;
+        }
+      } else {
+        console.error(`❌ ERROR: URI ${uri} threw wrong error type:`, error);
+        invalidTestsPassed = false;
+      }
+    }
+  }
+  
+  if (validTestsPassed && invalidTestsPassed) {
+    console.log('\n✅ All version extraction tests passed!');
+  } else {
+    console.error('\n❌ Some version extraction tests failed!');
+    process.exit(1);
+  }
+  
+  // Test getSchemaForVersion function
+  console.log('\n=== TESTING getSchemaForVersion FUNCTION ===');
+  
+  // Test with valid versions
+  console.log('\nTesting valid versions:');
+  let schemaValidTestsPassed = true;
+  for (const version of SUPPORTED_VERSIONS) {
+    try {
+      // Just call the function to see if it throws, but don't await the result
+      // This checks the validation logic without making network requests
+      getSchemaForVersion(version);
+      console.log(`✅ Version ${version} accepted without error`);
+    } catch (error) {
+      console.error(`❌ ERROR: Version ${version} should be valid but threw an error:`, error);
+      schemaValidTestsPassed = false;
+    }
+  }
+  
+  // Test with invalid versions
+  console.log('\nTesting invalid versions:');
+  let schemaInvalidTestsPassed = true;
+  const invalidVersions = ['invalid-version', '1.0.0', '2023-01-01'];
+  
+  for (const version of invalidVersions) {
+    try {
+      await getSchemaForVersion(version);
+      console.error(`❌ ERROR: Version ${version} should throw an error but didn't`);
+      schemaInvalidTestsPassed = false;
+    } catch (error) {
+      if (error instanceof McpError) {
+        const isCorrectErrorCode = error.code === ErrorCode.InvalidParams;
+        const messageIncludesVersions = error.message.includes(SUPPORTED_VERSIONS.join(', '));
+        
+        if (isCorrectErrorCode && messageIncludesVersions) {
+          console.log(`✅ Version ${version} -> Correctly threw McpError with code ${error.code}`);
+          console.log(`   Message: ${error.message}`);
+        } else {
+          console.error(`❌ ERROR: Version ${version} threw McpError but with wrong details:`);
+          console.error(`   Expected code ${ErrorCode.InvalidParams}, got ${error.code}`);
+          console.error(`   Message includes supported versions: ${messageIncludesVersions}`);
+          console.error(`   Message: ${error.message}`);
+          schemaInvalidTestsPassed = false;
+        }
+      } else {
+        console.error(`❌ ERROR: Version ${version} threw wrong error type:`, error);
+        schemaInvalidTestsPassed = false;
+      }
+    }
+  }
+  
+  if (schemaValidTestsPassed && schemaInvalidTestsPassed) {
+    console.log('\n✅ All getSchemaForVersion tests passed!');
+  } else {
+    console.error('\n❌ Some getSchemaForVersion tests failed!');
+    process.exit(1);
   }
   
   // Test resource template URIs

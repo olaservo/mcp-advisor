@@ -53,8 +53,12 @@ npm install -g mcp-advisor
 
 #### Prompts
 
-- `explain`: Comprehensive explanation of MCP topics with full documentation context. Requires a `topic` argument specifying which MCP topic you would like explained in detail.
-- `evaluate_server_compliance`: Evaluates Model Context Protocol (MCP) specification compliance for a given server repository. Requires a `path` argument specifying the path to the MCP server repository to evaluate.
+- `explain`: Comprehensive explanation of MCP topics with full documentation context. 
+  - Required argument: `topic` - Specifies which MCP topic you would like explained in detail.
+  - Optional argument: `version` - Specifies which MCP specification version to use. Supported versions: `draft`, `2024-11-05`, `2025-03-26` (default).
+- `evaluate_server_compliance`: Evaluates Model Context Protocol (MCP) specification compliance for a given server repository. 
+  - Required argument: `path` - Specifies the path to the MCP server repository to evaluate.
+  - Optional argument: `version` - Specifies which MCP specification version to use. Supported versions: `draft`, `2024-11-05`, `2025-03-26` (default).
 
 #### Resources
 
