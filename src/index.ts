@@ -152,12 +152,16 @@ const serverCapabilities: ServerCapabilities = {
   prompts: {},
   resources: {},
   completions: {},
-  resourceTemplates: {} // Add resource templates capability
+  resourceTemplates: {}
 };
 
 const server = new Server(
-  { name: 'mcp-advisor', version: '0.1.0' },
-  { capabilities: serverCapabilities }
+  { name: 'mcp-advisor', version: '0.3.2' },
+  { capabilities: serverCapabilities,
+    instructions: `I am a Model Context Protocol (MCP) documentation expert that provides comprehensive access to the MCP specification and helps evaluate server implementations for compliance.
+    I have access to the complete MCP specification across multiple versions (${SUPPORTED_VERSIONS.join(', ')}) including schemas, architecture docs, protocol details, and implementation guides. I can explain any MCP concept in detail with authoritative references and evaluate server code against the specification requirements.
+    Default version: ${VERSION} (can be overridden per request)`
+  }
 );
 
 const prompts = [
