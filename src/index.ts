@@ -62,7 +62,7 @@ class Cache {
 const SCHEMA_URL = `https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/${VERSION}/schema.json`;
 
 // Suggested topics
-const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'authorization', 'why not just use http?', 'why does this protocol need to exist?'];
+const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'authorization', 'why not just use http?', 'security best practices', 'cancellation', 'progress reporting', 'server utilities', 'client utilities'];
 // Include all prompt names here
 const EXPLAIN_PROMPT = 'explain';
 const EVALUATE_SERVER_PROMPT = 'evaluate_server_compliance';
@@ -156,11 +156,9 @@ const serverCapabilities: ServerCapabilities = {
 };
 
 const server = new Server(
-  { name: 'mcp-advisor', version: '0.3.2' },
+  { name: 'mcp-advisor', version: '0.3.3' },
   { capabilities: serverCapabilities,
-    instructions: `I am a Model Context Protocol (MCP) documentation expert that provides comprehensive access to the MCP specification and helps evaluate server implementations for compliance.
-    I have access to the complete MCP specification across multiple versions (${SUPPORTED_VERSIONS.join(', ')}) including schemas, architecture docs, protocol details, and implementation guides. I can explain any MCP concept in detail with authoritative references and evaluate server code against the specification requirements.
-    Default version: ${VERSION} (can be overridden per request)`
+    instructions: `Workflow: 1) Use 'explain' prompt for understanding MCP concepts before implementation, 2) Use 'evaluate_server_compliance' prompt to validate existing server code against specification requirements. Always clarify expected  spec version and provide the version parameter when working with specific spec releases. Resource templates support version-specific access - use {version} parameter for precise specification targeting. Performance: Content is cached for 1 hour; initial requests may take 5-10 seconds for complete specification fetching. Limitations: Requires network access to modelcontextprotocol.io; falls back to expired cache on network failures. Supported versions: ${SUPPORTED_VERSIONS.join(', ')} (default: ${VERSION}).`
   }
 );
 
