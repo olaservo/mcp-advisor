@@ -42,7 +42,7 @@ npm install -g mcp-advisor
         "mcp-advisor@latest"
       ],
       "env": {
-        "DEFAULT_SPEC_VERSION":"2025-03-26" // Optional - overrides the default version used for static Resources that correspond to a specific MCP version
+        "DEFAULT_SPEC_VERSION":"2025-06-18" // Optional - overrides the default version used for static Resources that correspond to a specific MCP version
       }
     }
   }
@@ -55,10 +55,10 @@ npm install -g mcp-advisor
 
 - `explain`: Comprehensive explanation of MCP topics with full documentation context. 
   - Required argument: `topic` - Specifies which MCP topic you would like explained in detail.
-  - Optional argument: `version` - Specifies which MCP specification version to use. Supported versions: `draft`, `2024-11-05`, `2025-03-26` (default).
+  - Optional argument: `version` - Specifies which MCP specification version to use. Supported versions: `draft`, `2024-11-05`, `2025-03-26`, `2025-06-18` (default).
 - `evaluate_server_compliance`: Evaluates Model Context Protocol (MCP) specification compliance for a given server repository. 
   - Required argument: `path` - Specifies the path to the MCP server repository to evaluate.
-  - Optional argument: `version` - Specifies which MCP specification version to use. Supported versions: `draft`, `2024-11-05`, `2025-03-26` (default).
+  - Optional argument: `version` - Specifies which MCP specification version to use. Supported versions: `draft`, `2024-11-05`, `2025-03-26`, `2025-06-18` (default).
 
 #### Resources
 
@@ -84,12 +84,12 @@ The server provides resource templates that allow accessing specification resour
 - `https://modelcontextprotocol.io/specification/{version}/architecture/index.md`: Access the architecture specification for any supported version
 - And more...
 
-Supported versions: `draft`, `2024-11-05`, `2025-03-26` (default)
+Supported versions: `draft`, `2024-11-05`, `2025-03-26`, `2025-06-18` (default)
 
 **Version Configuration**:
 - **Resource Templates**: Clients that support Resource Templates can specify the version in the URI template.
 - **Environment Variable**: Set the `DEFAULT_SPEC_VERSION` environment variable to change the default version (e.g., `DEFAULT_SPEC_VERSION=draft`).
-- **Default Version**: If neither of the above is specified, the server uses `2025-03-26` as the default version.
+- **Default Version**: If neither of the above is specified, the server uses `2025-06-18` as the default version.
 
 **Note on Backward Compatibility**: Clients that only support Resources (and not Resource Templates) will still be able to access the regular Resources using the configured default version. The server maintains full backward compatibility with existing clients.
 
@@ -130,7 +130,7 @@ The server includes URL filtering to ensure content matching the requested versi
 npm run test
 ```
 
-This verifies that the server correctly filters specification URLs based on the requested version. The server supports multiple versions including `draft`, `2024-11-05`, and `2025-03-26`, with `2025-03-26` being the default if no version is specified.
+This verifies that the server correctly filters specification URLs based on the requested version. The server supports multiple versions including `draft`, `2024-11-05`, `2025-03-26`, and `2025-06-18`, with `2025-06-18` being the default if no version is specified.
 
 ## Links
 

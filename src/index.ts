@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // List of supported versions
-export const SUPPORTED_VERSIONS = ['draft', '2024-11-05', '2025-03-26'];
+export const SUPPORTED_VERSIONS = ['draft', '2024-11-05', '2025-03-26', '2025-06-18'];
 
 // Default version to use when no specific version is requested
 // Can be overridden with DEFAULT_SPEC_VERSION environment variable
-const DEFAULT_VERSION = '2025-03-26';
+const DEFAULT_VERSION = '2025-06-18';
 export const VERSION = (() => {
   const envVersion = process.env.DEFAULT_SPEC_VERSION;
   if (envVersion && !SUPPORTED_VERSIONS.includes(envVersion)) {
@@ -62,7 +62,7 @@ class Cache {
 const SCHEMA_URL = `https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/${VERSION}/schema.json`;
 
 // Suggested topics
-const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'authorization', 'why not just use http?', 'security best practices', 'cancellation', 'progress reporting', 'server utilities', 'client utilities'];
+const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'authorization', 'why not just use http?', 'security best practices', 'cancellation', 'progress reporting', 'server utilities', 'client utilities', 'elicitation'];
 // Include all prompt names here
 const EXPLAIN_PROMPT = 'explain';
 const EVALUATE_SERVER_PROMPT = 'evaluate_server_compliance';
