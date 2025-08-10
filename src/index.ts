@@ -156,7 +156,7 @@ const serverCapabilities: ServerCapabilities = {
 };
 
 const server = new Server(
-  { name: 'mcp-advisor', version: '0.4.0' },
+  { name: 'mcp-advisor', version: '0.5.0' },
   { capabilities: serverCapabilities,
     instructions: `Workflow: 1) Use 'explain' prompt for understanding MCP concepts before implementation, 2) Use 'evaluate_server_compliance' prompt to validate existing server code against specification requirements. Always clarify expected  spec version and provide the version parameter when working with specific spec releases. Resource templates support version-specific access - use {version} parameter for precise specification targeting. Performance: Content is cached for 1 hour; initial requests may take 5-10 seconds for complete specification fetching. Limitations: Requires network access to modelcontextprotocol.io; falls back to expired cache on network failures. Supported versions: ${SUPPORTED_VERSIONS.join(', ')} (default: ${VERSION}).`
   }
