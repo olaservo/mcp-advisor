@@ -463,10 +463,10 @@ const resources = [
     description: 'Architecture overview and core concepts'
   },
   {
-    name: 'MCP Legacy Tools',
+    name: 'MCP Debugging Tools',
     uri: 'https://modelcontextprotocol.io/legacy/tools/index.md',
     mimeType: 'text/markdown',
-    description: 'Legacy tools including the MCP Inspector'
+    description: 'Debugging tools including the MCP Inspector'
   },
   {
     name: 'MCP Overview',
