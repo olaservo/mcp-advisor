@@ -43,7 +43,7 @@
     "typescript": "^5.8.2"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14",
+    "@types/node": "^24.2.1",
     "ts-node": "^10.9.2"
   }
 }
