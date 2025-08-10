@@ -19,10 +19,15 @@ async function testUrlMatching() {
     // Documentation sections
     '/quickstart/',
     '/development/',
-    '/sdk/',
-    '/tutorials/',
+    '/community/',           // NEW: SEP Guidelines, Communication, Governance
+    '/docs/getting-started/', // NEW: Introduction
+    '/docs/learn/',          // NEW: Architecture, Client/Server Concepts  
     '/docs/concepts/',
     '/docs/tools/',
+    '/legacy/tools/',        // NEW: Inspector
+    '/overview/',            // NEW: Main MCP overview
+    '/sdk/',
+    '/tutorials/',
     
     // Special sections
     'github.com/modelcontextprotocol/',  // SDK repositories
