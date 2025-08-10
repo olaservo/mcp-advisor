@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/olaservo/mcp-advisor#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.11.4",
+    "@modelcontextprotocol/sdk": "^1.17.2",
     "node-fetch": "^3.3.2",
     "typescript": "^5.8.2"
   },
