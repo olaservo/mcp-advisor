@@ -441,6 +441,38 @@ const resources = [
     uri: 'https://modelcontextprotocol.io/docs/index.md',
     mimeType: 'text/markdown',
     description: 'General documentation including FAQs, introduction, and client list'
+  },
+  
+  // New comprehensive coverage resources
+  {
+    name: 'MCP Community Documentation',
+    uri: 'https://modelcontextprotocol.io/community/index.md',
+    mimeType: 'text/markdown',
+    description: 'Community guidelines including SEP Guidelines, Communication, and Governance'
+  },
+  {
+    name: 'MCP Getting Started Guide',
+    uri: 'https://modelcontextprotocol.io/docs/getting-started/index.md',
+    mimeType: 'text/markdown',
+    description: 'Introduction and getting started with MCP'
+  },
+  {
+    name: 'MCP Learning Resources',
+    uri: 'https://modelcontextprotocol.io/docs/learn/index.md',
+    mimeType: 'text/markdown',
+    description: 'Architecture overview and core concepts'
+  },
+  {
+    name: 'MCP Legacy Tools',
+    uri: 'https://modelcontextprotocol.io/legacy/tools/index.md',
+    mimeType: 'text/markdown',
+    description: 'Legacy tools including the MCP Inspector'
+  },
+  {
+    name: 'MCP Overview',
+    uri: 'https://modelcontextprotocol.io/overview/index.md',
+    mimeType: 'text/markdown',
+    description: 'High-level overview of the Model Context Protocol'
   }
 ];
 
@@ -460,9 +492,25 @@ export async function fetchLinksList(): Promise<string[]> {
     }
     
     const text = await response.text();
-    const links = text.match(/\(([^)]+)\)/g)?.map(link => link.slice(1, -1)) || [];
-    Cache.set('llms.txt', links);
-    return links;
+    const extractedLinks = text.match(/\(([^)]+)\)/g)?.map(link => link.slice(1, -1)) || [];
+    
+    // Filter out invalid entries
+    const validLinks = extractedLinks.filter(link => {
+      // Filter out empty strings and 'MCP' entries
+      if (!link || link === 'MCP') {
+        return false;
+      }
+      
+      // Check if it looks like a URL
+      if (!link.startsWith('http://') && !link.startsWith('https://')) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    Cache.set('llms.txt', validLinks);
+    return validLinks;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Failed to fetch links list:', errorMessage);
@@ -830,6 +878,26 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const links = await fetchLinksList();
     urls = filterUrlsBySection(links, '/docs/');
     resourceTitle = 'MCP General Documentation';
+  } else if (uri === 'https://modelcontextprotocol.io/community/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/community/');
+    resourceTitle = 'MCP Community Documentation';
+  } else if (uri === 'https://modelcontextprotocol.io/docs/getting-started/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/docs/getting-started/');
+    resourceTitle = 'MCP Getting Started Guide';
+  } else if (uri === 'https://modelcontextprotocol.io/docs/learn/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/docs/learn/');
+    resourceTitle = 'MCP Learning Resources';
+  } else if (uri === 'https://modelcontextprotocol.io/legacy/tools/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/legacy/tools/');
+    resourceTitle = 'MCP Legacy Tools';
+  } else if (uri === 'https://modelcontextprotocol.io/overview/index.md') {
+    const links = await fetchLinksList();
+    urls = filterUrlsBySection(links, '/overview/');
+    resourceTitle = 'MCP Overview';
   } else if (uri.match(/\/specification\/[^/]+\/schema\.json$/)) {
     // Return the schema as JSON
     try {
