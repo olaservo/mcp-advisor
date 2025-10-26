@@ -82,7 +82,10 @@ The server provides resource templates that allow accessing specification resour
 - `https://modelcontextprotocol.io/specification/{version}/index.md`: Access the complete specification for any supported version
 - `https://modelcontextprotocol.io/specification/{version}/schema.json`: Access the JSON schema for any supported version
 - `https://modelcontextprotocol.io/specification/{version}/architecture/index.md`: Access the architecture specification for any supported version
-- And more...
+- `https://modelcontextprotocol.io/specification/{version}/basic/index.md`: Access the base protocol specification for any supported version
+- `https://modelcontextprotocol.io/specification/{version}/basic/utilities/index.md`: Access the utilities specification for any supported version
+- `https://modelcontextprotocol.io/specification/{version}/server/index.md`: Access the server features specification for any supported version
+- `https://modelcontextprotocol.io/specification/{version}/client/index.md`: Access the client features specification for any supported version
 
 Supported versions: `draft`, `2024-11-05`, `2025-03-26`, `2025-06-18` (default)
 
@@ -93,12 +96,17 @@ Supported versions: `draft`, `2024-11-05`, `2025-03-26`, `2025-06-18` (default)
 
 **Note on Backward Compatibility**: Clients that only support Resources (and not Resource Templates) will still be able to access the regular Resources using the configured default version. The server maintains full backward compatibility with existing clients.
 
-**Additional Documentation**
+**Additional Documentation Resources**
 - **Getting Started** (`/quickstart`): Getting started guides for client developers, server developers, and users
 - **Development** (`/development`): Development resources including contributing guidelines, roadmap, and updates
 - **SDK Documentation** (`/sdk`): SDK documentation for various programming languages
 - **Tutorials & Examples** (`/tutorials`): Tutorials, examples, and implementation guides
 - **General Documentation** (`/docs`): General documentation including FAQs, introduction, and client list
+- **Community Documentation** (`/community`): Community guidelines including SEP Guidelines, Communication, and Governance
+- **Getting Started Guide** (`/docs/getting-started`): Introduction and getting started with MCP
+- **Learning Resources** (`/docs/learn`): Architecture overview and core concepts
+- **MCP Debugging Tools** (`/legacy/tools`): Debugging tools including the MCP Inspector
+- **MCP Overview** (`/overview`): High-level overview of the Model Context Protocol
 
 All specification content is fetched from a list provided by [a standardized llms.txt file](https://llmstxt.org/) (except for the schema.json which is fetched from GitHub) and cached locally with a 1-hour TTL (time-to-live) to improve performance. If a fetch fails, the server will attempt to use expired cached content as a fallback when available.
 

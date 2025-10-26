@@ -63,48 +63,11 @@ class Cache {
   }
 }
 
-const SCHEMA_URL = `https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/${VERSION}/schema.json`;
-
 // Suggested topics
 const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'authorization', 'why not just use http?', 'security best practices', 'cancellation', 'progress reporting', 'server utilities', 'client utilities', 'elicitation'];
 // Include all prompt names here
 const EXPLAIN_PROMPT = 'explain';
 const EVALUATE_SERVER_PROMPT = 'evaluate_server_compliance';
-
-async function getSchema(): Promise<any> {
-  const cached = Cache.get<any>(SCHEMA_URL);
-  if (cached) {
-    return cached;
-  }
-
-  try {
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch(SCHEMA_URL);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const schema = await response.json();
-    Cache.set(SCHEMA_URL, schema);
-    return schema;
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Failed to fetch schema:', errorMessage);
-    
-    // If we have a cached version, return it even if expired
-    const expired = Cache.getExpired<any>(SCHEMA_URL);
-    if (expired) {
-      console.error('Using expired cache as fallback');
-      return expired;
-    }
-    
-    throw new McpError(
-      ErrorCode.InternalError,
-      `Failed to fetch schema: ${errorMessage}`
-    );
-  }
-}
 
 // Define resource templates with version parameter
 const resourceTemplates = [
@@ -173,9 +136,9 @@ const serverCapabilities: ServerCapabilities = {
 };
 
 const server = new Server(
-  { name: 'mcp-advisor', version: '0.5.0' },
+  { name: 'mcp-advisor', version: '0.5.1' },
   { capabilities: serverCapabilities,
-    instructions: `Workflow: 1) Use 'explain' prompt for understanding MCP concepts before implementation, 2) Use 'evaluate_server_compliance' prompt to validate existing server code against specification requirements. Always clarify expected  spec version and provide the version parameter when working with specific spec releases. Resource templates support version-specific access - use {version} parameter for precise specification targeting. Performance: Content is cached for 1 hour; initial requests may take 5-10 seconds for complete specification fetching. Limitations: Requires network access to modelcontextprotocol.io; falls back to expired cache on network failures. Supported versions: ${SUPPORTED_VERSIONS.join(', ')} (default: ${VERSION}).`
+    instructions: `Workflow: 1) Use 'explain' prompt for understanding MCP concepts before implementation, 2) Use 'evaluate_server_compliance' prompt to validate existing server code against specification requirements. Always clarify expected spec version and provide the version parameter when working with specific spec releases. Resource templates support version-specific access - use {version} parameter for precise specification targeting. Performance: Content is cached for 1 hour; initial requests may take 5-10 seconds for complete specification fetching. Limitations: Requires network access to modelcontextprotocol.io; falls back to expired cache on network failures. Supported versions: ${SUPPORTED_VERSIONS.join(', ')} (default: ${VERSION}).`
   }
 );
 
@@ -609,10 +572,10 @@ const resources = [
     description: 'Architecture overview and core concepts'
   },
   {
-    name: 'MCP Legacy Tools',
+    name: 'MCP Debugging Tools',
     uri: 'https://modelcontextprotocol.io/legacy/tools/index.md',
     mimeType: 'text/markdown',
-    description: 'Legacy tools including the MCP Inspector'
+    description: 'Debugging tools including the MCP Inspector'
   },
   {
     name: 'MCP Overview',

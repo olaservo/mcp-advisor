@@ -1,6 +1,6 @@
 {
   "name": "mcp-advisor",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "MCP Server to assist LLMs and humans on Model Context Protocol (MCP) spec compliance and understanding",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -38,14 +38,14 @@
   },
   "homepage": "https://github.com/olaservo/mcp-advisor#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.11.4",
+    "@modelcontextprotocol/sdk": "^1.17.2",
     "node-fetch": "^3.3.2",
     "typescript": "^5.8.2",
     "zod": "^3.25.76",
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14",
+    "@types/node": "^24.3.0",
     "ts-node": "^10.9.2"
   }
 }
