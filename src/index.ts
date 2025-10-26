@@ -333,17 +333,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: 'getResource',
-        description: 'Fetch a specific MCP documentation resource by its URI. Use this to retrieve any available resource such as specification sections, tutorials, SDK docs, etc.',
+        description: 'Fetch any MCP documentation resource by its exact URI',
         inputSchema: zodToJsonSchema(GetResourceSchema)
       },
       {
         name: 'getSpecificationResource',
-        description: 'Fetch MCP specification documentation for a specific version and optional section. This is a convenient way to get specification content without knowing the exact URI.',
+        description: 'Fetch MCP specification documentation by version and section',
         inputSchema: zodToJsonSchema(GetSpecificationResourceSchema)
       },
       {
         name: 'listAvailableResources',
-        description: 'List all available MCP documentation resources with their URIs, names, and descriptions. Use this to discover what resources are available.',
+        description: 'List all available MCP documentation resources',
         inputSchema: zodToJsonSchema(ListAvailableResourcesSchema)
       }
     ]
