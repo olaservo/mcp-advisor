@@ -17,17 +17,21 @@ export const VERSION = (() => {
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { 
-  ServerCapabilities, 
-  GetPromptRequestSchema, 
+import {
+  ServerCapabilities,
+  GetPromptRequestSchema,
   ListPromptsRequestSchema,
   ListResourcesRequestSchema,
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
   CompleteRequestSchema,
   McpError,
   ErrorCode
 } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 // Generic caching mechanism
 interface CacheEntry<T> {
   data: T;
@@ -148,9 +152,22 @@ const resourceTemplates = [
   }
 ];
 
+// Tool input schemas
+const GetResourceSchema = z.object({
+  uri: z.string().describe("URI of the resource to fetch (e.g., 'https://modelcontextprotocol.io/specification/2025-06-18/index.md')"),
+});
+
+const GetSpecificationResourceSchema = z.object({
+  version: z.enum(['draft', '2024-11-05', '2025-03-26', '2025-06-18']).describe("MCP specification version to fetch"),
+  section: z.enum(['complete', 'architecture', 'basic', 'utilities', 'server', 'client', 'schema']).optional().describe("Specific section to fetch (defaults to 'complete' which includes all sections)"),
+});
+
+const ListAvailableResourcesSchema = z.object({});
+
 const serverCapabilities: ServerCapabilities = {
   prompts: {},
   resources: {},
+  tools: {},
   completions: {},
   resourceTemplates: {}
 };
@@ -345,6 +362,135 @@ server.setRequestHandler(CompleteRequestSchema, async (request) => {
   throw new McpError(
     ErrorCode.InvalidParams,
     `Unknown reference type or argument in completion request`
+  );
+});
+
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: 'getResource',
+        description: 'Fetch a specific MCP documentation resource by its URI. Use this to retrieve any available resource such as specification sections, tutorials, SDK docs, etc.',
+        inputSchema: zodToJsonSchema(GetResourceSchema)
+      },
+      {
+        name: 'getSpecificationResource',
+        description: 'Fetch MCP specification documentation for a specific version and optional section. This is a convenient way to get specification content without knowing the exact URI.',
+        inputSchema: zodToJsonSchema(GetSpecificationResourceSchema)
+      },
+      {
+        name: 'listAvailableResources',
+        description: 'List all available MCP documentation resources with their URIs, names, and descriptions. Use this to discover what resources are available.',
+        inputSchema: zodToJsonSchema(ListAvailableResourcesSchema)
+      }
+    ]
+  };
+});
+
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  if (name === 'getResource') {
+    const validatedArgs = GetResourceSchema.parse(args);
+    const { uri } = validatedArgs;
+
+    // Find the matching resource
+    const matchingResource = resources.find(r => r.uri === uri);
+
+    if (!matchingResource) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Unknown resource URI: ${uri}. Use listAvailableResources tool to see available resources.`
+      );
+    }
+
+    try {
+      const resourceContent = await fetchResourceContentByUri(uri);
+
+      // Return the resource content as resource references
+      return {
+        content: resourceContent.map((resource: any) => ({
+          type: 'resource' as const,
+          resource: resource
+        }))
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Failed to fetch resource: ${errorMessage}`
+      );
+    }
+  }
+
+  if (name === 'getSpecificationResource') {
+    const validatedArgs = GetSpecificationResourceSchema.parse(args);
+    const { version, section = 'complete' } = validatedArgs;
+
+    // Build the URI based on version and section
+    let uri: string;
+    if (section === 'schema') {
+      uri = `https://modelcontextprotocol.io/specification/${version}/schema.json`;
+    } else if (section === 'complete') {
+      uri = `https://modelcontextprotocol.io/specification/${version}/index.md`;
+    } else if (section === 'utilities') {
+      uri = `https://modelcontextprotocol.io/specification/${version}/basic/utilities/index.md`;
+    } else {
+      uri = `https://modelcontextprotocol.io/specification/${version}/${section}/index.md`;
+    }
+
+    try {
+      const resourceContent = await fetchResourceContentByUri(uri);
+
+      // Return the resource content as resource references
+      return {
+        content: resourceContent.map((resource: any) => ({
+          type: 'resource' as const,
+          resource: resource
+        }))
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Failed to fetch specification resource: ${errorMessage}`
+      );
+    }
+  }
+
+  if (name === 'listAvailableResources') {
+    ListAvailableResourcesSchema.parse(args);
+
+    // Build a formatted list of all available resources
+    const resourceList = resources.map(resource => {
+      return `**${resource.name}**\n` +
+             `URI: ${resource.uri}\n` +
+             `Type: ${resource.mimeType}\n` +
+             `Description: ${resource.description}`;
+    }).join('\n\n---\n\n');
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `# Available MCP Documentation Resources\n\n` +
+                `Total resources: ${resources.length}\n\n` +
+                `---\n\n${resourceList}\n\n` +
+                `\n## Resource Templates\n\n` +
+                `The following resource templates are also available:\n\n` +
+                resourceTemplates.map(template =>
+                  `**${template.name}**\n` +
+                  `URI Template: ${template.uriTemplate}\n` +
+                  `Description: ${template.description}`
+                ).join('\n\n---\n\n')
+        }
+      ]
+    };
+  }
+
+  throw new McpError(
+    ErrorCode.MethodNotFound,
+    `Unknown tool: ${name}`
   );
 });
 
@@ -766,6 +912,74 @@ function getSchemaUrlForVersion(version: string): string {
   return `https://raw.githubusercontent.com/modelcontextprotocol/specification/refs/heads/main/schema/${version}/schema.json`;
 }
 
+// Helper function to fetch resource content by URI
+async function fetchResourceContentByUri(uri: string): Promise<ContentItem[]> {
+  const version = extractVersionFromUri(uri);
+
+  if (uri.match(/\/specification\/[^/]+\/index\.md$/)) {
+    // Complete specification
+    return await getCompleteResourceDoc(uri, version);
+  }
+
+  if (uri.match(/\/specification\/[^/]+\/schema\.json$/)) {
+    // Schema
+    const schema = await getSchemaForVersion(version);
+    return [{
+      uri: uri,
+      text: JSON.stringify(schema, null, 2),
+      mimeType: 'application/json'
+    }];
+  }
+
+  // Other resources - fetch and combine
+  const links = await fetchLinksList();
+  let urls: string[] = [];
+
+  if (uri.match(/\/specification\/[^/]+\/architecture\/index\.md$/)) {
+    urls = filterUrlsBySection(links, '/architecture/', version);
+  } else if (uri.match(/\/specification\/[^/]+\/basic\/index\.md$/)) {
+    urls = filterUrlsBySection(links, '/basic/', version);
+  } else if (uri.match(/\/specification\/[^/]+\/basic\/utilities\/index\.md$/)) {
+    urls = filterUrlsBySection(links, '/basic/utilities/', version);
+  } else if (uri.match(/\/specification\/[^/]+\/server\/index\.md$/)) {
+    urls = filterUrlsBySection(links, '/server/', version);
+  } else if (uri.match(/\/specification\/[^/]+\/client\/index\.md$/)) {
+    urls = filterUrlsBySection(links, '/client/', version);
+  } else if (uri === 'https://modelcontextprotocol.io/quickstart/index.md') {
+    urls = filterUrlsBySection(links, '/quickstart/');
+  } else if (uri === 'https://modelcontextprotocol.io/development/index.md') {
+    urls = filterUrlsBySection(links, '/development/');
+  } else if (uri === 'https://modelcontextprotocol.io/sdk/index.md') {
+    urls = filterUrlsBySection(links, '/sdk/');
+  } else if (uri === 'https://modelcontextprotocol.io/tutorials/index.md') {
+    urls = filterUrlsBySection(links, '/tutorials/');
+  } else if (uri === 'https://modelcontextprotocol.io/docs/index.md') {
+    urls = filterUrlsBySection(links, '/docs/');
+  } else if (uri === 'https://modelcontextprotocol.io/community/index.md') {
+    urls = filterUrlsBySection(links, '/community/');
+  } else if (uri === 'https://modelcontextprotocol.io/docs/getting-started/index.md') {
+    urls = filterUrlsBySection(links, '/docs/getting-started/');
+  } else if (uri === 'https://modelcontextprotocol.io/docs/learn/index.md') {
+    urls = filterUrlsBySection(links, '/docs/learn/');
+  } else if (uri === 'https://modelcontextprotocol.io/legacy/tools/index.md') {
+    urls = filterUrlsBySection(links, '/legacy/tools/');
+  } else if (uri === 'https://modelcontextprotocol.io/overview/index.md') {
+    urls = filterUrlsBySection(links, '/overview/');
+  } else {
+    throw new Error(`Unsupported resource URI: ${uri}`);
+  }
+
+  const contentPromises = urls.map(url => fetchMarkdownContent(url));
+  const contents = await Promise.all(contentPromises);
+  const combinedMarkdown = contents.join('\n\n');
+
+  return [{
+    uri: uri,
+    text: combinedMarkdown,
+    mimeType: 'text/markdown'
+  }];
+}
+
 // Modified getSchema function to accept a version parameter
 export async function getSchemaForVersion(version: string): Promise<any> {
   // Validate that the version is supported
@@ -814,155 +1028,15 @@ export async function getSchemaForVersion(version: string): Promise<any> {
 
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const uri = request.params.uri;
-  
-  // Extract version from URI
-  const version = extractVersionFromUri(uri);
-  
-  // Determine which resource is being requested and select the appropriate URLs
-  let urls: string[] = [];
-  let resourceTitle = '';
-  const mimeType = 'text/markdown';
-  
-  if (uri.match(/\/specification\/[^/]+\/architecture\/index\.md$/)) {
-    // Get all architecture-related links
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/architecture/', version);
-    resourceTitle = 'MCP Specification - Architecture';
-  } else if (uri.match(/\/specification\/[^/]+\/basic\/index\.md$/)) {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/basic/', version);
-    resourceTitle = 'MCP Specification - Base Protocol';
-  } else if (uri.match(/\/specification\/[^/]+\/basic\/utilities\/index\.md$/)) {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/basic/utilities/', version);
-    resourceTitle = 'MCP Specification - Utilities';
-  } else if (uri.match(/\/specification\/[^/]+\/server\/index\.md$/)) {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/server/', version);
-    resourceTitle = 'MCP Specification - Server Features';
-  } else if (uri.match(/\/specification\/[^/]+\/client\/index\.md$/)) {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/client/', version);
-    resourceTitle = 'MCP Specification - Client Features';
-  } else if (uri.match(/\/specification\/[^/]+\/index\.md$/)) {
-    // Return the complete specification using multiple contents pattern
-    try {
-      const contentItems = await getCompleteResourceDoc(uri, version);
-      return {
-        contents: contentItems
-      };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Could not generate complete specification: ${errorMessage}`
-      );
-    }
-  } else if (uri === 'https://modelcontextprotocol.io/quickstart/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/quickstart/');
-    resourceTitle = 'MCP Getting Started';
-  } else if (uri === 'https://modelcontextprotocol.io/development/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/development/');
-    resourceTitle = 'MCP Development';
-  } else if (uri === 'https://modelcontextprotocol.io/sdk/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/sdk/');
-    resourceTitle = 'MCP SDK Documentation';
-  } else if (uri === 'https://modelcontextprotocol.io/tutorials/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/tutorials/');
-    resourceTitle = 'MCP Tutorials & Examples';
-  } else if (uri === 'https://modelcontextprotocol.io/docs/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/docs/');
-    resourceTitle = 'MCP General Documentation';
-  } else if (uri === 'https://modelcontextprotocol.io/community/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/community/');
-    resourceTitle = 'MCP Community Documentation';
-  } else if (uri === 'https://modelcontextprotocol.io/docs/getting-started/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/docs/getting-started/');
-    resourceTitle = 'MCP Getting Started Guide';
-  } else if (uri === 'https://modelcontextprotocol.io/docs/learn/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/docs/learn/');
-    resourceTitle = 'MCP Learning Resources';
-  } else if (uri === 'https://modelcontextprotocol.io/legacy/tools/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/legacy/tools/');
-    resourceTitle = 'MCP Legacy Tools';
-  } else if (uri === 'https://modelcontextprotocol.io/overview/index.md') {
-    const links = await fetchLinksList();
-    urls = filterUrlsBySection(links, '/overview/');
-    resourceTitle = 'MCP Overview';
-  } else if (uri.match(/\/specification\/[^/]+\/schema\.json$/)) {
-    // Return the schema as JSON
-    try {
-      const schema = await getSchemaForVersion(version);
-      return {
-        contents: [
-          {
-            uri: uri,
-            text: JSON.stringify(schema, null, 2),
-            mimeType: 'application/json'
-          }
-        ]
-      };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Could not read schema resource: ${errorMessage}`
-      );
-    }
-  } else {
-    throw new McpError(
-      ErrorCode.MethodNotFound,
-      `Unknown resource: ${uri}`
-    );
-  }
-  
-  // We found a supported resource, now fetch and combine the content
+
   try {
-    // Initialize an empty string for the combined markdown
-    let combinedMarkdown = '';
-    
-    // Fetch content from all URLs and combine them
-    const contentPromises = urls.map(async (url, index) => {
-      const content = await fetchMarkdownContent(url);
-      
-      // For all pages except the first one, we want to add a section divider
-      if (index > 0) {
-        const fileName = url.split('/').pop() || '';
-        const sectionName = fileName.replace('.md', '').replace('_index', 'Overview');
-        return `\n\n## ${sectionName}\n\n${content}`;
-      }
-      return content;
-    });
-    
-    // Wait for all content to be fetched
-    const contents = await Promise.all(contentPromises);
-    
-    // Combine all markdown content
-    const contentWithSections = contents.join('\n\n');
-    combinedMarkdown += contentWithSections;
-    
-    // Return the combined content
+    const contentItems = await fetchResourceContentByUri(uri);
     return {
-      contents: [
-        {
-          uri: uri,
-          text: combinedMarkdown,
-          mimeType: mimeType
-        }
-      ]
+      contents: contentItems
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Error combining specifications:', error);
+    console.error('Error fetching resource:', error);
     throw new McpError(
       ErrorCode.InternalError,
       `Could not read resource: ${uri} - ${errorMessage}`
