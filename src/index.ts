@@ -1,17 +1,23 @@
 #!/usr/bin/env node
 // List of supported versions
-export const SUPPORTED_VERSIONS = ['draft', '2024-11-05', '2025-03-26', '2025-06-18'];
+export const SUPPORTED_VERSIONS = ['draft', '2024-11-05', '2025-03-26', '2025-06-18'] as const;
+type SupportedVersion = typeof SUPPORTED_VERSIONS[number];
+
+// Helper function to check if a string is a supported version
+function isSupportedVersion(version: string): version is SupportedVersion {
+  return (SUPPORTED_VERSIONS as readonly string[]).includes(version);
+}
 
 // Default version to use when no specific version is requested
 // Can be overridden with DEFAULT_SPEC_VERSION environment variable
 const DEFAULT_VERSION = '2025-06-18';
 export const VERSION = (() => {
   const envVersion = process.env.DEFAULT_SPEC_VERSION;
-  if (envVersion && !SUPPORTED_VERSIONS.includes(envVersion)) {
+  if (envVersion && !isSupportedVersion(envVersion)) {
     console.error(`ERROR: Unsupported version '${envVersion}' specified in DEFAULT_SPEC_VERSION environment variable. Supported versions are: ${SUPPORTED_VERSIONS.join(', ')}. Falling back to default version: ${DEFAULT_VERSION}`);
   }
-  return envVersion && SUPPORTED_VERSIONS.includes(envVersion) 
-    ? envVersion 
+  return envVersion && isSupportedVersion(envVersion)
+    ? envVersion
     : DEFAULT_VERSION;
 })();
 
@@ -121,7 +127,7 @@ const GetResourceSchema = z.object({
 });
 
 const GetSpecificationResourceSchema = z.object({
-  version: z.enum(['draft', '2024-11-05', '2025-03-26', '2025-06-18']).describe("MCP specification version to fetch"),
+  version: z.enum(SUPPORTED_VERSIONS).describe("MCP specification version to fetch"),
   section: z.enum(['complete', 'architecture', 'basic', 'utilities', 'server', 'client', 'schema']).optional().describe("Specific section to fetch (defaults to 'complete' which includes all sections)"),
 });
 
@@ -190,7 +196,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   let promptVersion = VERSION;
   if (request.params.arguments?.version) {
     const requestedVersion = request.params.arguments.version;
-    if (!SUPPORTED_VERSIONS.includes(requestedVersion)) {
+    if (!isSupportedVersion(requestedVersion)) {
       throw new McpError(
         ErrorCode.InvalidParams,
         `Unsupported version: '${requestedVersion}'. Supported versions are: ${SUPPORTED_VERSIONS.join(', ')}`
@@ -845,7 +851,7 @@ export function extractVersionFromUri(uri: string): string {
   const versionMatch = uri.match(/\/specification\/([^/]+)\//);
   if (versionMatch && versionMatch[1]) {
     // Validate that the version is supported
-    if (SUPPORTED_VERSIONS.includes(versionMatch[1])) {
+    if (isSupportedVersion(versionMatch[1])) {
       version = versionMatch[1];
     } else {
       console.error(`ERROR: Unsupported version '${versionMatch[1]}' requested in URI: ${uri}`);
@@ -946,7 +952,7 @@ async function fetchResourceContentByUri(uri: string): Promise<ContentItem[]> {
 // Modified getSchema function to accept a version parameter
 export async function getSchemaForVersion(version: string): Promise<any> {
   // Validate that the version is supported
-  if (!SUPPORTED_VERSIONS.includes(version)) {
+  if (!isSupportedVersion(version)) {
     console.error(`ERROR: Unsupported version '${version}' requested for schema`);
     throw new McpError(
       ErrorCode.InvalidParams,
