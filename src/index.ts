@@ -64,7 +64,7 @@ class Cache {
 }
 
 // Suggested topics
-const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'authorization', 'why not just use http?', 'security best practices', 'cancellation', 'progress reporting', 'server utilities', 'client utilities', 'elicitation'];
+const TOPIC_COMPLETIONS = ['tools', 'prompts', 'resources', 'roots', 'sampling', 'transports', 'authorization', 'security best practices', 'cancellation', 'progress reporting', 'server utilities', 'client utilities', 'elicitation'];
 // Include all prompt names here
 const EXPLAIN_PROMPT = 'explain';
 const EVALUATE_SERVER_PROMPT = 'evaluate_server_compliance';
@@ -372,7 +372,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Return the resource content as resource references
       return {
-        content: resourceContent.map((resource: any) => ({
+        content: resourceContent.map((resource: ContentItem) => ({
           type: 'resource' as const,
           resource: resource
         }))
@@ -407,7 +407,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Return the resource content as resource references
       return {
-        content: resourceContent.map((resource: any) => ({
+        content: resourceContent.map((resource: ContentItem) => ({
           type: 'resource' as const,
           resource: resource
         }))
