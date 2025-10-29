@@ -417,6 +417,108 @@ async function testUrlMatching() {
     console.error('\n❌ Some non-versioned URL tests failed!');
     process.exit(1);
   }
+
+  // Test that filterUrlsBySection consistently returns correct version URLs
+  console.log('\n=== TESTING VERSION CONSISTENCY IN URL GENERATION ===');
+  console.log('Verifying that all generated URLs match the requested version\n');
+
+  let versionConsistencyPassed = true;
+
+  for (const testVersion of SUPPORTED_VERSIONS) {
+    console.log(`Testing version: ${testVersion}`);
+
+    const versionedSections = [
+      '/architecture/',
+      '/basic/',
+      '/client/',
+      '/server/'
+    ];
+
+    for (const section of versionedSections) {
+      const urls = filterUrlsBySection(allUrls, section, testVersion);
+
+      if (urls.length === 0) {
+        console.log(`  ⚠️  ${section}: No URLs found`);
+        continue;
+      }
+
+      // Check that ALL URLs contain the requested version
+      const urlsWithWrongVersion = urls.filter(url => {
+        // Versioned URLs should contain the exact version
+        if (url.includes('/specification/')) {
+          return !url.includes(`/${testVersion}/`);
+        }
+        // Non-versioned URLs are OK
+        return false;
+      });
+
+      if (urlsWithWrongVersion.length === 0) {
+        console.log(`  ✅ ${section}: All ${urls.length} URLs have correct version ${testVersion}`);
+      } else {
+        console.error(`  ❌ ${section}: ${urlsWithWrongVersion.length}/${urls.length} URLs have wrong version!`);
+        urlsWithWrongVersion.forEach(url => {
+          const match = url.match(/\/((?:draft|\d{4}-\d{2}-\d{2}))\//);
+          const foundVersion = match ? match[1] : 'none';
+          console.error(`     Expected /${testVersion}/ but found /${foundVersion}/ in: ${url}`);
+        });
+        versionConsistencyPassed = false;
+      }
+    }
+    console.log('');
+  }
+
+  if (versionConsistencyPassed) {
+    console.log('✅ All version consistency tests passed!');
+  } else {
+    console.error('❌ Some version consistency tests failed!');
+    process.exit(1);
+  }
+
+  // Test that version-swapping generates valid URL patterns
+  console.log('\n=== TESTING VERSION-SWAPPED URL VALIDITY ===');
+  console.log('Verifying that swapped URLs follow expected patterns\n');
+
+  let urlValidityPassed = true;
+  const versionPattern = /\/((?:draft|\d{4}-\d{2}-\d{2}))\//;
+
+  for (const testVersion of SUPPORTED_VERSIONS) {
+    const architectureUrls = filterUrlsBySection(allUrls, '/architecture/', testVersion);
+
+    if (architectureUrls.length === 0) {
+      console.log(`⚠️  Version ${testVersion}: No architecture URLs found`);
+      continue;
+    }
+
+    console.log(`Testing ${testVersion}:`);
+
+    for (const url of architectureUrls) {
+      // Extract version from URL
+      const match = url.match(versionPattern);
+
+      if (!match) {
+        // Non-versioned URLs are fine
+        console.log(`  ℹ️  Non-versioned URL: ${url}`);
+        continue;
+      }
+
+      const urlVersion = match[1];
+
+      if (urlVersion === testVersion) {
+        console.log(`  ✅ ${url}`);
+      } else {
+        console.error(`  ❌ Expected version ${testVersion} but got ${urlVersion}: ${url}`);
+        urlValidityPassed = false;
+      }
+    }
+    console.log('');
+  }
+
+  if (urlValidityPassed) {
+    console.log('✅ All URL validity tests passed!');
+  } else {
+    console.error('❌ Some URL validity tests failed!');
+    process.exit(1);
+  }
 }
 
 async function cleanup() {
