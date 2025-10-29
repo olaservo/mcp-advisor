@@ -376,13 +376,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
       const resourceContent = await fetchResourceContentByUri(uri);
 
-      // Return the resource content as resource references
-      return {
-        content: resourceContent.map((resource: ContentItem) => ({
-          type: 'resource' as const,
-          resource: resource
-        }))
-      };
+      // Combine multiple content items into text for tool response
+      if (resourceContent.length === 1) {
+        // Single resource - return as text
+        const item = resourceContent[0];
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: item.text || item.blob || ''
+            }
+          ]
+        };
+      } else {
+        // Multiple resources - combine into one text response
+        const combinedText = resourceContent
+          .map(item => `# ${item.name}\n\n${item.text || ''}`)
+          .join('\n\n---\n\n');
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: combinedText
+            }
+          ]
+        };
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new McpError(
@@ -411,13 +431,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
       const resourceContent = await fetchResourceContentByUri(uri);
 
-      // Return the resource content as resource references
-      return {
-        content: resourceContent.map((resource: ContentItem) => ({
-          type: 'resource' as const,
-          resource: resource
-        }))
-      };
+      // Combine multiple content items into text for tool response
+      if (resourceContent.length === 1) {
+        // Single resource - return as text
+        const item = resourceContent[0];
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: item.text || item.blob || ''
+            }
+          ]
+        };
+      } else {
+        // Multiple resources - combine into one text response
+        const combinedText = resourceContent
+          .map(item => `# ${item.name}\n\n${item.text || ''}`)
+          .join('\n\n---\n\n');
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: combinedText
+            }
+          ]
+        };
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new McpError(
@@ -528,12 +568,6 @@ const resources = [
   
   // Additional Documentation Resources
   {
-    name: 'MCP Getting Started',
-    uri: 'https://modelcontextprotocol.io/quickstart/index.md',
-    mimeType: 'text/markdown',
-    description: 'Getting started guides for client developers, server developers, and users'
-  },
-  {
     name: 'MCP Development',
     uri: 'https://modelcontextprotocol.io/development/index.md',
     mimeType: 'text/markdown',
@@ -579,15 +613,9 @@ const resources = [
   },
   {
     name: 'MCP Debugging Tools',
-    uri: 'https://modelcontextprotocol.io/legacy/tools/index.md',
+    uri: 'https://modelcontextprotocol.io/docs/tools/index.md',
     mimeType: 'text/markdown',
     description: 'Debugging tools including the MCP Inspector'
-  },
-  {
-    name: 'MCP Overview',
-    uri: 'https://modelcontextprotocol.io/overview/index.md',
-    mimeType: 'text/markdown',
-    description: 'High-level overview of the Model Context Protocol'
   }
 ];
 
@@ -638,12 +666,8 @@ export async function fetchLinksList(): Promise<string[]> {
 
 // Helper function to filter URLs by section and version
 export function filterUrlsBySection(links: string[], section: string, version: string = VERSION): string[] {
-  // Skip empty links and "MCP" entries, and filter to match specified version only
-  const validLinks = links.filter(url => 
-    url && 
-    url !== 'MCP' && 
-    (url.includes(`/${version}/`) || !url.match(/\/20\d{2}-\d{2}-\d{2}\/|\/draft\//))
-  );
+  // Skip empty links and "MCP" entries
+  const validLinks = links.filter(url => url && url !== 'MCP');
 
   // Handle regex patterns
   if (section.startsWith('^')) {
@@ -667,8 +691,31 @@ export function filterUrlsBySection(links: string[], section: string, version: s
     });
   }
 
-  // Default case: match by section path
-  return validLinks.filter(url => url.includes(section));
+  // For versioned spec URLs: First try direct match, then try version replacement
+  const versionPattern = /\/((?:draft|\d{4}-\d{2}-\d{2}))\//;
+
+  // Get all URLs matching the section
+  const sectionMatches = validLinks.filter(url => url.includes(section));
+
+  // Separate versioned URLs from non-versioned URLs
+  const versionedUrls = sectionMatches.filter(url => versionPattern.test(url));
+  const nonVersionedUrls = sectionMatches.filter(url => !versionPattern.test(url));
+
+  // For versioned URLs, try direct match first
+  const directMatches = versionedUrls.filter(url => url.includes(`/${version}/`));
+
+  if (directMatches.length > 0) {
+    return directMatches;
+  }
+
+  // If no direct matches, replace version in all versioned URLs
+  const templatedUrls = versionedUrls.map(url => url.replace(versionPattern, `/${version}/`));
+
+  // Return non-versioned URLs as-is, plus templated versioned URLs
+  const combined = [...nonVersionedUrls, ...templatedUrls];
+
+  // Remove duplicates
+  return [...new Set(combined)];
 }
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
@@ -678,7 +725,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 });
 
 // Helper function to fetch Markdown content from a URL
-async function fetchMarkdownContent(url: string): Promise<string> {
+async function fetchMarkdownContent(url: string): Promise<string | null> {
   const cached = Cache.get<string>(url);
   if (cached) {
     return cached;
@@ -687,13 +734,19 @@ async function fetchMarkdownContent(url: string): Promise<string> {
   try {
     const fetch = (await import('node-fetch')).default;
     const response = await fetch(url);
-    
+
     if (!response.ok) {
+      // Return null for 404s - these URLs don't exist for this version
+      if (response.status === 404) {
+        console.error(`URL not found (404): ${url}`);
+        return null;
+      }
+      // Throw for other errors
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
-    
+
     let markdown = await response.text();
-    
+
     // Process front matter if it exists
     if (markdown.startsWith('---')) {
       const secondDash = markdown.indexOf('---', 3);
@@ -702,18 +755,17 @@ async function fetchMarkdownContent(url: string): Promise<string> {
         markdown = markdown.substring(secondDash + 3).trim();
       }
     }
-    
+
     // Add source URL as reference
     markdown = markdown + '\n\n---\n*Source: [' + url + '](' + url + ')*\n';
-    
+
     Cache.set(url, markdown);
     return markdown;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Error fetching content from ${url}:`, error);
-    
-    // For markdown content, we don't use expired cache on error
-    // Instead return an error message that can be displayed
+
+    // For non-404 errors, return an error message that can be displayed
     return `**Error:** Failed to load content from ${url}: ${errorMessage}`;
   }
 }
@@ -721,7 +773,9 @@ async function fetchMarkdownContent(url: string): Promise<string> {
 // Define a type for content items
 interface ContentItem {
   uri: string;
-  text: string;
+  name?: string;
+  text?: string;
+  blob?: string;
   mimeType: string;
 }
 
@@ -729,20 +783,36 @@ async function getCompleteResourceDoc(baseUri: string, version: string = VERSION
   try {
     // Get the schema first for the specified version
     const schema = await getSchemaForVersion(version);
-    
-    // Get all links and filter for specification URLs matching the specified version
+
+    // Get all links and filter for specification URLs
     const allLinks = await fetchLinksList();
-    const specLinks = allLinks.filter(url => 
-      url.includes(`/specification/${version}/`) && 
-      !url.includes('schema.json')  // Exclude schema.json as we handle it separately
+    const versionPattern = /\/((?:draft|\d{4}-\d{2}-\d{2}))\//;
+
+    // First try direct match with requested version
+    let specLinks = allLinks.filter(url =>
+      url.includes(`/specification/${version}/`) &&
+      !url.includes('schema.json')
     );
-    
+
+    // If no direct matches, find URLs with ANY version and replace
+    if (specLinks.length === 0) {
+      const templateLinks = allLinks.filter(url =>
+        url.includes('/specification/') &&
+        versionPattern.test(url) &&
+        !url.includes('schema.json')
+      );
+      specLinks = templateLinks.map(url => url.replace(versionPattern, `/${version}/`));
+      // Remove duplicates
+      specLinks = [...new Set(specLinks)];
+    }
+
     // Create array to hold multiple contents
     const contents: ContentItem[] = [];
     
     // Add the schema as the first content
     contents.push({
       uri: `${baseUri}#schema`,
+      name: `MCP Specification Schema (${version})`,
       text: JSON.stringify(schema, null, 2),
       mimeType: 'application/json'
     });
@@ -756,31 +826,40 @@ async function getCompleteResourceDoc(baseUri: string, version: string = VERSION
       'server',
       'server/utilities'
     ];
-    
+
     // Fetch and combine content for each section
     for (const section of sections) {
-      const sectionLinks = filterUrlsBySection(specLinks, `/${section}/`);
-      
+      const sectionLinks = filterUrlsBySection(specLinks, `/${section}/`, version);
+
       // Skip empty sections
       if (sectionLinks.length === 0) continue;
-      
+
       // Fetch content from all URLs in this section
       const contentPromises = sectionLinks.map(url => fetchMarkdownContent(url));
       const sectionContents = await Promise.all(contentPromises);
-      
+
+      // Filter out null values (404s) and empty strings
+      const validContents = sectionContents.filter((content): content is string =>
+        content !== null && content.trim().length > 0
+      );
+
+      // Skip section if no valid content
+      if (validContents.length === 0) continue;
+
       // Add section content
       const sectionTitle = section.split('/').pop() || section;
       let sectionDoc = `# ${sectionTitle.charAt(0).toUpperCase() + sectionTitle.slice(1)}\n\n`;
-      sectionDoc += sectionContents.join('\n\n');
-      
+      sectionDoc += validContents.join('\n\n');
+
       // Add as a separate content item
       contents.push({
         uri: `${baseUri}#${section}`,
+        name: `MCP Specification - ${sectionTitle.charAt(0).toUpperCase() + sectionTitle.slice(1)} (${version})`,
         text: sectionDoc,
         mimeType: 'text/markdown'
       });
     }
-    
+
     return contents;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -797,14 +876,29 @@ async function getCombinedCompleteResourceDoc(version: string = VERSION): Promis
   try {
     // Get all links and filter for specification URLs matching the specified version
     const allLinks = await fetchLinksList();
-    const specLinks = allLinks.filter(url => 
-      url.includes(`/specification/${version}/`) && 
-      !url.includes('schema.json')  // Exclude schema.json as we handle it separately
+    const versionPattern = /\/((?:draft|\d{4}-\d{2}-\d{2}))\//;
+
+    // First try direct match with requested version
+    let specLinks = allLinks.filter(url =>
+      url.includes(`/specification/${version}/`) &&
+      !url.includes('schema.json')
     );
+
+    // If no direct matches, find URLs with ANY version and replace
+    if (specLinks.length === 0) {
+      const templateLinks = allLinks.filter(url =>
+        url.includes('/specification/') &&
+        versionPattern.test(url) &&
+        !url.includes('schema.json')
+      );
+      specLinks = templateLinks.map(url => url.replace(versionPattern, `/${version}/`));
+      // Remove duplicates
+      specLinks = [...new Set(specLinks)];
+    }
     
     // Build the complete document
     let completeDoc = '# Model Context Protocol Documentation\n\n';
-    
+
     // Define the order of sections
     const sections = [
       'architecture',
@@ -814,24 +908,32 @@ async function getCombinedCompleteResourceDoc(version: string = VERSION): Promis
       'server',
       'server/utilities'
     ];
-    
+
     // Fetch and combine content for each section
     for (const section of sections) {
-      const sectionLinks = filterUrlsBySection(specLinks, `/${section}/`);
-      
+      const sectionLinks = filterUrlsBySection(specLinks, `/${section}/`, version);
+
       // Skip empty sections
       if (sectionLinks.length === 0) continue;
-      
+
       // Fetch content from all URLs in this section
       const contentPromises = sectionLinks.map(url => fetchMarkdownContent(url));
       const contents = await Promise.all(contentPromises);
-      
+
+      // Filter out null values (404s) and empty strings
+      const validContents = contents.filter((content): content is string =>
+        content !== null && content.trim().length > 0
+      );
+
+      // Skip section if no valid content
+      if (validContents.length === 0) continue;
+
       // Add section content
       const sectionTitle = section.split('/').pop() || section;
       completeDoc += `\n\n## ${sectionTitle.charAt(0).toUpperCase() + sectionTitle.slice(1)}\n\n`;
-      completeDoc += contents.join('\n\n');
+      completeDoc += validContents.join('\n\n');
     }
-    
+
     return completeDoc;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -884,6 +986,7 @@ function getSchemaUrlForVersion(version: string): string {
 // Helper function to fetch resource content by URI
 async function fetchResourceContentByUri(uri: string): Promise<ContentItem[]> {
   const version = extractVersionFromUri(uri);
+  console.error(`fetchResourceContentByUri called with URI: ${uri}, extracted version: ${version}`);
 
   if (uri.match(/\/specification\/[^/]+\/index\.md$/)) {
     // Complete specification
@@ -895,6 +998,7 @@ async function fetchResourceContentByUri(uri: string): Promise<ContentItem[]> {
     const schema = await getSchemaForVersion(version);
     return [{
       uri: uri,
+      name: `MCP Specification JSON Schema (${version})`,
       text: JSON.stringify(schema, null, 2),
       mimeType: 'application/json'
     }];
@@ -902,6 +1006,7 @@ async function fetchResourceContentByUri(uri: string): Promise<ContentItem[]> {
 
   // Other resources - fetch and combine
   const links = await fetchLinksList();
+  console.error(`fetchLinksList returned ${links.length} total links`);
   let urls: string[] = [];
 
   if (uri.match(/\/specification\/[^/]+\/architecture\/index\.md$/)) {
@@ -914,8 +1019,6 @@ async function fetchResourceContentByUri(uri: string): Promise<ContentItem[]> {
     urls = filterUrlsBySection(links, '/server/', version);
   } else if (uri.match(/\/specification\/[^/]+\/client\/index\.md$/)) {
     urls = filterUrlsBySection(links, '/client/', version);
-  } else if (uri === 'https://modelcontextprotocol.io/quickstart/index.md') {
-    urls = filterUrlsBySection(links, '/quickstart/');
   } else if (uri === 'https://modelcontextprotocol.io/development/index.md') {
     urls = filterUrlsBySection(links, '/development/');
   } else if (uri === 'https://modelcontextprotocol.io/sdk/index.md') {
@@ -930,20 +1033,40 @@ async function fetchResourceContentByUri(uri: string): Promise<ContentItem[]> {
     urls = filterUrlsBySection(links, '/docs/getting-started/');
   } else if (uri === 'https://modelcontextprotocol.io/docs/learn/index.md') {
     urls = filterUrlsBySection(links, '/docs/learn/');
-  } else if (uri === 'https://modelcontextprotocol.io/legacy/tools/index.md') {
-    urls = filterUrlsBySection(links, '/legacy/tools/');
-  } else if (uri === 'https://modelcontextprotocol.io/overview/index.md') {
-    urls = filterUrlsBySection(links, '/overview/');
+  } else if (uri === 'https://modelcontextprotocol.io/docs/tools/index.md') {
+    urls = filterUrlsBySection(links, '/docs/tools/');
   } else {
     throw new Error(`Unsupported resource URI: ${uri}`);
   }
 
+  if (urls.length === 0) {
+    console.error(`No URLs found for URI: ${uri}, section pattern used in filterUrlsBySection`);
+    throw new Error(`No content URLs found for resource: ${uri}`);
+  }
+
+  console.error(`Fetching ${urls.length} URLs for ${uri}`);
   const contentPromises = urls.map(url => fetchMarkdownContent(url));
   const contents = await Promise.all(contentPromises);
-  const combinedMarkdown = contents.join('\n\n');
+
+  // Filter out null values (404s) and empty strings
+  const validContents = contents.filter((content): content is string =>
+    content !== null && content.trim().length > 0
+  );
+
+  if (validContents.length === 0) {
+    throw new Error(`No valid content found for resource: ${uri} (all URLs returned 404 or errors)`);
+  }
+
+  const combinedMarkdown = validContents.join('\n\n');
+
+  console.error(`Combined markdown length: ${combinedMarkdown.length}`);
+
+  // Extract a descriptive name from the URI
+  const resourceName = uri.split('/').filter(Boolean).slice(-2).join(' - ').replace('index.md', 'Documentation').replace('.md', '');
 
   return [{
     uri: uri,
+    name: resourceName,
     text: combinedMarkdown,
     mimeType: 'text/markdown'
   }];
