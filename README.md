@@ -1,5 +1,7 @@
 # MCP Advisor
 
+⚠️**Warning: currently this server depends on the official LLMS.txt file which no longer matches the format expected by this server.  This server also still needs to be updated for the latest spec.  For the time being, I recommend using the official docs server and pointing to the schemas in the MCP repo instead.**
+
 An MCP server that provides comprehensive access to the Model Context Protocol specification through both prompts and resources. This server helps LLMs and humans understand and work with the MCP specification by providing the complete JSON schema and detailed documentation.
 
 ## When would I use this type of solution instead of web search or other RAG solutions?
