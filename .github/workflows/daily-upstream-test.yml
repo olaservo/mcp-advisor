@@ -1,0 +1,85 @@
+name: Daily Upstream Documentation Test
+
+on:
+  schedule:
+    # Run daily at 9:00 AM UTC
+    - cron: '0 9 * * *'
+  # Allow manual triggering for testing
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run tests against upstream docs
+        run: npm test
+
+  create-issue:
+    runs-on: ubuntu-latest
+    needs: test
+    if: failure()
+
+    steps:
+      - name: Create issue for test failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '⚠️ Daily upstream documentation test failed';
+            const body = `The daily test against upstream MCP documentation has failed.
+
+            **Date:** ${new Date().toISOString().split('T')[0]}
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            This likely means that the upstream MCP documentation has changed in a way that breaks our URL matching tests.
+
+            ## Next Steps
+            1. Review the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) to see which tests failed
+            2. Check the upstream MCP documentation for changes
+            3. Update the test expectations or URL matching logic as needed
+            4. Close this issue once resolved
+
+            ---
+            _This issue was automatically created by the daily upstream test workflow._`;
+
+            // Check if there's already an open issue about this
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'upstream-test-failure',
+            });
+
+            // Only create a new issue if one doesn't already exist
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['upstream-test-failure', 'automated'],
+              });
+            }

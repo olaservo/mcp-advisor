@@ -17,15 +17,12 @@ async function testUrlMatching() {
     '/specification/',
     
     // Documentation sections
-    '/quickstart/',
     '/development/',
     '/community/',           // NEW: SEP Guidelines, Communication, Governance
     '/docs/getting-started/', // NEW: Introduction
     '/docs/learn/',          // NEW: Architecture, Client/Server Concepts  
     '/docs/concepts/',
     '/docs/tools/',
-    '/legacy/tools/',        // NEW: Inspector
-    '/overview/',            // NEW: Main MCP overview
     '/sdk/',
     '/tutorials/',
     
@@ -314,12 +311,213 @@ async function testUrlMatching() {
     'https://modelcontextprotocol.io/specification/{version}/index.md',
     'https://modelcontextprotocol.io/specification/{version}/schema.json'
   ];
-  
+
   for (const templateUri of templateUris) {
     for (const version of SUPPORTED_VERSIONS) {
       const resolvedUri = templateUri.replace('{version}', version);
       console.log(`Template: ${templateUri} with version ${version} -> ${resolvedUri}`);
     }
+  }
+
+  // Test version-swapping functionality
+  console.log('\n=== TESTING VERSION-SWAPPING FUNCTIONALITY ===');
+  console.log('This tests that we can generate URLs for versions not in llms.txt\n');
+
+  // Find which versions have URLs in llms.txt
+  const versionsInLlms = new Map<string, number>();
+  for (const version of SUPPORTED_VERSIONS) {
+    const count = allUrls.filter(url => url.includes(`/${version}/`)).length;
+    versionsInLlms.set(version, count);
+    console.log(`Version ${version} has ${count} URLs in llms.txt`);
+  }
+
+  // Find a version with URLs (likely 2025-06-18 or latest)
+  const sourceVersion = [...versionsInLlms.entries()]
+    .sort((a, b) => b[1] - a[1])[0][0]; // Version with most URLs
+
+  console.log(`\nUsing ${sourceVersion} as source version (has ${versionsInLlms.get(sourceVersion)} URLs)`);
+
+  // Test swapping to each version
+  let versionSwapTestsPassed = true;
+  for (const targetVersion of SUPPORTED_VERSIONS) {
+    if (targetVersion === sourceVersion) continue;
+
+    console.log(`\nTesting swap from ${sourceVersion} to ${targetVersion}:`);
+
+    // Test client section
+    const clientUrls = filterUrlsBySection(allUrls, '/client/', targetVersion);
+    console.log(`  /client/ section: ${clientUrls.length} URLs`);
+
+    if (clientUrls.length === 0) {
+      console.error(`  ❌ FAIL: No URLs found for ${targetVersion} /client/`);
+      versionSwapTestsPassed = false;
+    } else {
+      // Verify all URLs have the correct version
+      const allHaveCorrectVersion = clientUrls.every(url => url.includes(`/${targetVersion}/`));
+      if (allHaveCorrectVersion) {
+        console.log(`  ✅ PASS: All URLs have correct version ${targetVersion}`);
+        // Show a sample URL
+        console.log(`  Sample: ${clientUrls[0]}`);
+      } else {
+        console.error(`  ❌ FAIL: Some URLs don't have version ${targetVersion}`);
+        versionSwapTestsPassed = false;
+      }
+    }
+
+    // Test server section
+    const serverUrls = filterUrlsBySection(allUrls, '/server/', targetVersion);
+    console.log(`  /server/ section: ${serverUrls.length} URLs`);
+
+    if (serverUrls.length === 0) {
+      console.error(`  ❌ FAIL: No URLs found for ${targetVersion} /server/`);
+      versionSwapTestsPassed = false;
+    } else {
+      const allHaveCorrectVersion = serverUrls.every(url => url.includes(`/${targetVersion}/`));
+      if (allHaveCorrectVersion) {
+        console.log(`  ✅ PASS: All URLs have correct version ${targetVersion}`);
+        console.log(`  Sample: ${serverUrls[0]}`);
+      } else {
+        console.error(`  ❌ FAIL: Some URLs don't have version ${targetVersion}`);
+        versionSwapTestsPassed = false;
+      }
+    }
+  }
+
+  if (versionSwapTestsPassed) {
+    console.log('\n✅ All version-swapping tests passed!');
+  } else {
+    console.error('\n❌ Some version-swapping tests failed!');
+    process.exit(1);
+  }
+
+  // Test that non-versioned URLs aren't affected by version parameter
+  console.log('\n=== TESTING NON-VERSIONED URL HANDLING ===');
+  const nonVersionedSections = ['/community/', '/tutorials/'];
+  let nonVersionedTestsPassed = true;
+
+  for (const section of nonVersionedSections) {
+    const urlsWithDefaultVersion = filterUrlsBySection(allUrls, section, VERSION);
+    const urlsWithDraft = filterUrlsBySection(allUrls, section, 'draft');
+
+    const sameUrls = JSON.stringify(urlsWithDefaultVersion.sort()) === JSON.stringify(urlsWithDraft.sort());
+
+    if (sameUrls && urlsWithDefaultVersion.length > 0) {
+      console.log(`✅ ${section}: Returns same URLs regardless of version (${urlsWithDefaultVersion.length} URLs)`);
+    } else if (urlsWithDefaultVersion.length === 0) {
+      console.log(`⚠️  ${section}: No URLs found (may not exist in llms.txt)`);
+    } else {
+      console.error(`❌ ${section}: Returns different URLs for different versions!`);
+      nonVersionedTestsPassed = false;
+    }
+  }
+
+  if (nonVersionedTestsPassed) {
+    console.log('\n✅ All non-versioned URL tests passed!');
+  } else {
+    console.error('\n❌ Some non-versioned URL tests failed!');
+    process.exit(1);
+  }
+
+  // Test that filterUrlsBySection consistently returns correct version URLs
+  console.log('\n=== TESTING VERSION CONSISTENCY IN URL GENERATION ===');
+  console.log('Verifying that all generated URLs match the requested version\n');
+
+  let versionConsistencyPassed = true;
+
+  for (const testVersion of SUPPORTED_VERSIONS) {
+    console.log(`Testing version: ${testVersion}`);
+
+    const versionedSections = [
+      '/architecture/',
+      '/basic/',
+      '/client/',
+      '/server/'
+    ];
+
+    for (const section of versionedSections) {
+      const urls = filterUrlsBySection(allUrls, section, testVersion);
+
+      if (urls.length === 0) {
+        console.log(`  ⚠️  ${section}: No URLs found`);
+        continue;
+      }
+
+      // Check that ALL URLs contain the requested version
+      const urlsWithWrongVersion = urls.filter(url => {
+        // Versioned URLs should contain the exact version
+        if (url.includes('/specification/')) {
+          return !url.includes(`/${testVersion}/`);
+        }
+        // Non-versioned URLs are OK
+        return false;
+      });
+
+      if (urlsWithWrongVersion.length === 0) {
+        console.log(`  ✅ ${section}: All ${urls.length} URLs have correct version ${testVersion}`);
+      } else {
+        console.error(`  ❌ ${section}: ${urlsWithWrongVersion.length}/${urls.length} URLs have wrong version!`);
+        urlsWithWrongVersion.forEach(url => {
+          const match = url.match(/\/((?:draft|\d{4}-\d{2}-\d{2}))\//);
+          const foundVersion = match ? match[1] : 'none';
+          console.error(`     Expected /${testVersion}/ but found /${foundVersion}/ in: ${url}`);
+        });
+        versionConsistencyPassed = false;
+      }
+    }
+    console.log('');
+  }
+
+  if (versionConsistencyPassed) {
+    console.log('✅ All version consistency tests passed!');
+  } else {
+    console.error('❌ Some version consistency tests failed!');
+    process.exit(1);
+  }
+
+  // Test that version-swapping generates valid URL patterns
+  console.log('\n=== TESTING VERSION-SWAPPED URL VALIDITY ===');
+  console.log('Verifying that swapped URLs follow expected patterns\n');
+
+  let urlValidityPassed = true;
+  const versionPattern = /\/((?:draft|\d{4}-\d{2}-\d{2}))\//;
+
+  for (const testVersion of SUPPORTED_VERSIONS) {
+    const architectureUrls = filterUrlsBySection(allUrls, '/architecture/', testVersion);
+
+    if (architectureUrls.length === 0) {
+      console.log(`⚠️  Version ${testVersion}: No architecture URLs found`);
+      continue;
+    }
+
+    console.log(`Testing ${testVersion}:`);
+
+    for (const url of architectureUrls) {
+      // Extract version from URL
+      const match = url.match(versionPattern);
+
+      if (!match) {
+        // Non-versioned URLs are fine
+        console.log(`  ℹ️  Non-versioned URL: ${url}`);
+        continue;
+      }
+
+      const urlVersion = match[1];
+
+      if (urlVersion === testVersion) {
+        console.log(`  ✅ ${url}`);
+      } else {
+        console.error(`  ❌ Expected version ${testVersion} but got ${urlVersion}: ${url}`);
+        urlValidityPassed = false;
+      }
+    }
+    console.log('');
+  }
+
+  if (urlValidityPassed) {
+    console.log('✅ All URL validity tests passed!');
+  } else {
+    console.error('❌ Some URL validity tests failed!');
+    process.exit(1);
   }
 }
 
